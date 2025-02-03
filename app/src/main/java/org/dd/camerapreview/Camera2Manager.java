@@ -4,10 +4,16 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Matrix;
+import android.graphics.PointF;
+import android.graphics.RectF;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.*;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 import android.widget.Toast;
@@ -66,6 +72,7 @@ public class Camera2Manager {
     private String getFrontCameraId() throws CameraAccessException {
         for (String cameraId : cameraManager.getCameraIdList()) {
             CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            setTextureTransform(characteristics);
             if (characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_FRONT) {
                 return cameraId;
             }
@@ -236,5 +243,83 @@ public class Camera2Manager {
             }
         }
         return null;
+    }
+
+    void setTextureTransform(CameraCharacteristics characteristics) {
+        Size previewSize = getPreviewSize(characteristics);
+        int width = previewSize.getWidth();
+        int height = previewSize.getHeight();
+        int sensorOrientation = getCameraSensorOrientation(characteristics);
+        // Indicate the size of the buffer the texture should expect
+        textureView.getSurfaceTexture().setDefaultBufferSize(width, height);
+        // Save the texture dimensions in a rectangle
+        RectF viewRect = new RectF(0,0, textureView.getWidth(), textureView.getHeight());
+        // Determine the rotation of the display
+        float rotationDegrees = 0;
+        try {
+            rotationDegrees = (float)getDisplayRotation();
+        } catch (Exception ignored) {
+        }
+        float w, h;
+        if ((sensorOrientation - rotationDegrees) % 180 == 0) {
+            w = width;
+            h = height;
+        } else {
+            // Swap the width and height if the sensor orientation and display rotation don't match
+            w = height;
+            h = width;
+        }
+        float viewAspectRatio = viewRect.width()/viewRect.height();
+        float imageAspectRatio = w/h;
+        final PointF scale;
+        // This will make the camera frame fill the texture view, if you'd like to fit it into the view swap the "<" sign for ">"
+        if (viewAspectRatio < imageAspectRatio) {
+            // If the view is "thinner" than the image constrain the height and calculate the scale for the texture width
+            scale = new PointF((viewRect.height() / viewRect.width()) * ((float) height / (float) width), 1f);
+        } else {
+            scale = new PointF(1f, (viewRect.width() / viewRect.height()) * ((float) width / (float) height));
+        }
+        if (rotationDegrees % 180 != 0) {
+            // If we need to rotate the texture 90º we need to adjust the scale
+            float multiplier = viewAspectRatio < imageAspectRatio ? w/h : h/w;
+            scale.x *= multiplier;
+            scale.y *= multiplier;
+        }
+
+        Matrix matrix = new Matrix();
+        // Set the scale
+        matrix.setScale(scale.x, scale.y, viewRect.centerX(), viewRect.centerY());
+        if (rotationDegrees != 0) {
+            // Set rotation of the device isn't upright
+            matrix.postRotate(0 - rotationDegrees, viewRect.centerX(), viewRect.centerY());
+        }
+        // Transform the texture
+        textureView.setTransform(matrix);
+    }
+
+    int getDisplayRotation() {
+        switch (textureView.getDisplay().getRotation()) {
+            case Surface.ROTATION_0:
+            default:
+                return 0;
+            case Surface.ROTATION_90:
+                return  90;
+            case Surface.ROTATION_180:
+                return  180;
+            case Surface.ROTATION_270:
+                return 270;
+        }
+    }
+
+    Size getPreviewSize(CameraCharacteristics characteristics) {
+        StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        Size[] previewSizes = map.getOutputSizes(SurfaceTexture.class);
+        // TODO: decide on which size fits your view size the best
+        return previewSizes[0];
+    }
+
+    int getCameraSensorOrientation(CameraCharacteristics characteristics) {
+        Integer cameraOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+        return (360 - (cameraOrientation != null ? cameraOrientation : 0)) % 360;
     }
 }
