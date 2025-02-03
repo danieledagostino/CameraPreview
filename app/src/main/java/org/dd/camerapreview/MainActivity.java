@@ -30,6 +30,33 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Wide camera selection button
+        ImageButton wideCameraButton = findViewById(R.id.btn_wide_camera);
+        wideCameraButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                camera2Manager.selectCamera("wide");
+            }
+        });
+
+        // Standard camera selection button
+        ImageButton standardCameraButton = findViewById(R.id.btn_standard_camera);
+        standardCameraButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                camera2Manager.selectCamera("standard");
+            }
+        });
+
+        // Zoom camera selection button
+        ImageButton zoomCameraButton = findViewById(R.id.btn_zoom_camera);
+        zoomCameraButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                camera2Manager.selectCamera("zoom");
+            }
+        });
+
         // Capture cycle button
         ImageButton captureButton = findViewById(R.id.btn_capture_cycle);
         captureButton.setOnClickListener(new View.OnClickListener() {
@@ -47,6 +74,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
+
+
 
     @Override
     protected void onPause() {

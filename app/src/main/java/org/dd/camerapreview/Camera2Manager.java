@@ -125,6 +125,21 @@ public class Camera2Manager {
         openCamera();
     }
 
+    public void selectWideCamera() {
+        // Logic to switch to wide camera (if available)
+        Toast.makeText(activity, "Wide camera selected.", Toast.LENGTH_SHORT).show();
+    }
+
+    public void selectStandardCamera() {
+        // Logic to switch to standard camera
+        Toast.makeText(activity, "Standard camera selected.", Toast.LENGTH_SHORT).show();
+    }
+
+    public void selectZoomCamera() {
+        // Logic to switch to zoom camera (if available)
+        Toast.makeText(activity, "Zoom camera selected.", Toast.LENGTH_SHORT).show();
+    }
+
     public void closeCamera() {
         if (captureSession != null) {
             captureSession.close();
@@ -170,5 +185,56 @@ public class Camera2Manager {
         isCapturing = false;
         // Logic to stop capturing and process images into a video
         Toast.makeText(activity, "Capture cycle stopped.", Toast.LENGTH_SHORT).show();
+    }
+
+    public void selectCamera(String cameraType) {
+        try {
+            switch (cameraType) {
+                case "wide":
+                    // Logic to select wide camera
+                    currentCameraId = getWideCameraId();
+                    break;
+                case "standard":
+                    // Logic to select standard camera
+                    currentCameraId = getStandardCameraId();
+                    break;
+                case "zoom":
+                    // Logic to select zoom camera
+                    currentCameraId = getZoomCameraId();
+                    break;
+                default:
+                    currentCameraId = getBackCameraId(); // Default to back camera
+                    break;
+            }
+            closeCamera();
+            openCamera();
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String getWideCameraId() throws CameraAccessException {
+        // Add logic to find the wide camera (if supported by the device)
+        return getCameraIdByLensFacing(CameraCharacteristics.LENS_FACING_BACK);
+    }
+
+    private String getStandardCameraId() throws CameraAccessException {
+        // Add logic to find the standard camera (if supported by the device)
+        return getCameraIdByLensFacing(CameraCharacteristics.LENS_FACING_BACK);
+    }
+
+    private String getZoomCameraId() throws CameraAccessException {
+        // Add logic to find the zoom camera (if supported by the device)
+        return getCameraIdByLensFacing(CameraCharacteristics.LENS_FACING_BACK);
+    }
+
+    private String getCameraIdByLensFacing(int lensFacing) throws CameraAccessException {
+        for (String cameraId : cameraManager.getCameraIdList()) {
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            if (characteristics.get(CameraCharacteristics.LENS_FACING) == lensFacing) {
+                return cameraId;
+            }
+        }
+        return null;
     }
 }

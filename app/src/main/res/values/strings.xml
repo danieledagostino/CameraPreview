@@ -2,4 +2,7 @@
     <string name="app_name">Camera2 App</string>
     <string name="switch_camera">Switch Camera</string>
     <string name="capture_cycle">Capture Cycle</string>
+    <string name="wide_camera">Wide Camera</string>
+    <string name="standard_camera">Standard Camera</string>
+    <string name="zoom_camera">Zoom Camera</string>
 </resources>
