@@ -1,0 +1,61 @@
+# Android
+/.idea/
+/.gradle/
+/build/
+/local.properties
+/.externalNativeBuild/
+/captures/
+/output/
+/.idea/.name
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+
+# Gradle
+.gradle
+build/
+
+# Android Studio specific files
+.idea/
+*.iml
+
+# JDK specific
+*.jar
+*.war
+*.ear
+
+# Kotlin
+*.kotlin_module
+
+# Android NDK
+*.obj
+*.o
+*.a
+
+# Firebase
+google-services.json
+
+# Others
+*.log
+*.tmp
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
