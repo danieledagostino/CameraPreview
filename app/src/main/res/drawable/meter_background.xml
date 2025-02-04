@@ -1,0 +1,41 @@
+<!-- meter_background.xml -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="500dp"
+    android:height="50dp"
+    android:viewportWidth="500"
+    android:viewportHeight="50">
+
+    <!-- Linea di base -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M10,25 L490,25" />
+
+    <!-- Tacche principali -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M10,20 L10,30" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M250,15 L250,35" />
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M490,20 L490,30" />
+
+    <!-- Numeri (sostituiti con forme vettoriali) -->
+    <!-- Numero "0" -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M10,45 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <!-- Numero "5" -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M240,45 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+    <!-- Numero "10" -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M480,45 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0" />
+</vector>
