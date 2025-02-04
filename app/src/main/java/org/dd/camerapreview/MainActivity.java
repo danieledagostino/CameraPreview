@@ -19,7 +19,7 @@ public class MainActivity extends AppCompatActivity {
         camera2Manager = new Camera2Manager(this);
 
         // Initialize the camera preview
-        camera2Manager.openCamera();
+        //camera2Manager.setupPreview();
 
         // Switch camera button
         ImageButton switchCameraButton = findViewById(R.id.btn_switch_camera);
@@ -73,13 +73,24 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        RulesManager rulesManager = new RulesManager(this);
     }
 
-
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (camera2Manager != null) {
+            camera2Manager.closeCamera();
+        }
+    }
 
     @Override
     protected void onPause() {
         super.onPause();
-        camera2Manager.closeCamera();
+        if (camera2Manager != null) {
+            camera2Manager.closeCamera();
+            camera2Manager.closeCamera();
+        }
     }
 }

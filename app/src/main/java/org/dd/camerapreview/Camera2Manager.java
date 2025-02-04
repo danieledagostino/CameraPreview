@@ -43,19 +43,51 @@ public class Camera2Manager {
         this.activity = activity;
         textureView = activity.findViewById(R.id.camera_preview);
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+
+        // Imposta il SurfaceTextureListener
+        textureView.setSurfaceTextureListener(textureListener);
     }
+
+    private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+            // La superficie è pronta, apri la fotocamera
+            openCamera();
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
+            // Gestisci eventuali modifiche di dimensione, se necessario
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+            // Rilascia risorse della fotocamera
+            closeCamera();
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
+            // Non richiesto in questo caso
+        }
+    };
+
 
     public void openCamera() {
         startBackgroundThread();
-        try {
-            currentCameraId = isBackCamera ? getBackCameraId() : getFrontCameraId();
-            if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CAMERA}, 1);
-                return;
+        if (textureView.isAvailable()) {
+            startBackgroundThread();
+            try {
+                currentCameraId = isBackCamera ? getBackCameraId() : getFrontCameraId();
+                if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CAMERA}, 1);
+                    return;
+                }
+                cameraManager.openCamera(currentCameraId, stateCallback, backgroundHandler);
+            } catch (Exception e) {
+                Toast.makeText(activity, "Error opening camera: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
-            cameraManager.openCamera(currentCameraId, stateCallback, backgroundHandler);
-        } catch (Exception e) {
-            Toast.makeText(activity, "Error opening camera: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 

@@ -1,73 +1,85 @@
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Camera Preview -->
-    <TextureView
-        android:id="@+id/camera_preview"
+    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        xmlns:tools="http://schemas.android.com/tools"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-    <!-- Button to switch camera -->
-    <ImageButton
-        android:id="@+id/btn_switch_camera"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true"
-        android:layout_margin="16dp"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/switch_camera"
-        android:src="@drawable/switch_camera" />
+        <!-- Camera Preview -->
+        <TextureView
+            android:id="@+id/camera_preview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
 
-    <!-- Vertical buttons for selecting wide, standard, and zoom cameras -->
-    <LinearLayout
-        android:id="@+id/camera_selection_buttons"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:layout_alignParentEnd="true"
-        android:layout_alignParentTop="true"
-        android:layout_marginTop="50dp"
-        android:layout_marginEnd="16dp">
-
-        <!-- Wide Camera Button -->
+        <!-- Button to switch camera -->
         <ImageButton
-            android:id="@+id/btn_wide_camera"
+            android:id="@+id/btn_switch_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"
+            android:layout_margin="16dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/wide_camera"
-            android:src="@drawable/wide_camera" />
+            android:contentDescription="@string/switch_camera"
+            android:src="@drawable/switch_camera" />
 
-        <!-- Standard Camera Button -->
-        <ImageButton
-            android:id="@+id/btn_standard_camera"
+        <!-- Vertical buttons for selecting wide, standard, and zoom cameras -->
+        <LinearLayout
+            android:id="@+id/camera_selection_buttons"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/standard_camera"
-            android:src="@drawable/camera" />
+            android:orientation="vertical"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginTop="50dp"
+            android:layout_marginEnd="16dp">
 
-        <!-- Zoom Camera Button -->
-        <ImageButton
-            android:id="@+id/btn_zoom_camera"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/zoom_camera"
-            android:src="@drawable/zoom_camera" />
-    </LinearLayout>
+            <!-- Wide Camera Button -->
+            <ImageButton
+                android:id="@+id/btn_wide_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/wide_camera"
+                android:src="@drawable/wide_camera" />
+
+            <!-- Standard Camera Button -->
+            <ImageButton
+                android:id="@+id/btn_standard_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/standard_camera"
+                android:src="@drawable/camera" />
+
+            <!-- Zoom Camera Button -->
+            <ImageButton
+                android:id="@+id/btn_zoom_camera"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/zoom_camera"
+                android:src="@drawable/zoom_camera" />
+        </LinearLayout>
+    </RelativeLayout>
 
     <!-- Button to start/stop capture cycle -->
     <ImageButton
         android:id="@+id/btn_capture_cycle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
-        android:contentDescription="@string/capture_cycle"
-        android:src="@android:drawable/ic_menu_camera" />
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_centerHorizontal="true"
+        android:background="@null"
+        android:src="?android:attr/selectableItemBackgroundBorderless"
+        app:tint="@color/white" />
 
-</RelativeLayout>
+    <include layout="@layout/rules" />
+
+</LinearLayout>
