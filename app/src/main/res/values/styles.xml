@@ -1,6 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.Camera2App" parent="Theme.AppCompat.Light.NoActionBar">
         <!-- Your custom styles here -->
+    </style>
+    <!-- Stile comune per FrameLayout -->
+    <style name="CustomFrameLayoutStyle">
+        <item name="android:layout_marginStart">8dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:padding">8dp</item>
+        <item name="android:background">@drawable/ruler_border</item>
+    </style>
+
+    <!-- Stile comune per TextView -->
+    <style name="CustomTextViewStyle">
+        <item name="android:layout_marginBottom">5dp</item>
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <!-- Stile comune per DraggableRulerView -->
+    <style name="CustomDraggableRulerStyle">
+        <item name="android:layout_height">60dp</item>
+        <item name="android:layout_marginBottom">5dp</item>
+        <item name="android:layout_width">match_parent</item>
     </style>
 </resources>

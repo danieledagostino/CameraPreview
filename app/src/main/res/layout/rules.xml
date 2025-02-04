@@ -11,91 +11,72 @@
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:layout_margin="16dp"
-        android:background="@drawable/ruler_border">
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp">
         <TextView
+            style="@style/CustomTextViewStyle"
             android:id="@+id/label_integers"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Interi: "
-            android:textSize="16sp" />
+            android:text="Interi: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_integers"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_marginBottom="16dp" />
+            style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
     <!-- Etichetta e righello per stringhe -->
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:layout_margin="16dp"
-        android:background="@drawable/ruler_border">
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp">
         <TextView
             android:id="@+id/label_strings"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Stringhe: "
-            android:textSize="16sp" />
+            style="@style/CustomTextViewStyle"
+            android:text="Stringhe: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_strings"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_marginBottom="16dp" />
+            style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
     <!-- Etichetta e righello per float -->
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:layout_margin="16dp"
-        android:background="@drawable/ruler_border">
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp">
         <TextView
             android:id="@+id/label_floats"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Float: "
-            android:textSize="16sp" />
+            style="@style/CustomTextViewStyle"
+            android:text="Float: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_floats"
-            android:layout_width="match_parent"
-            android:layout_height="100dp"
-            android:layout_marginBottom="16dp" />
+            style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
     <!-- Etichetta e righello per alfanumerico -->
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="16dp"
-        android:layout_margin="16dp"
-        android:background="@drawable/ruler_border">
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp">
         <TextView
             android:id="@+id/label_alphanumeric"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"
-            android:text="Alfanumerico: "
-            android:textSize="16sp" />
+            style="@style/CustomTextViewStyle"
+            android:text="Alfanumerico: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_alphanumeric"
-            android:layout_width="match_parent"
-            android:layout_height="100dp" />
+            style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
 </LinearLayout>
