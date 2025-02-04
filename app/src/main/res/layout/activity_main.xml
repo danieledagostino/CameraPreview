@@ -67,6 +67,9 @@
                 android:src="@drawable/zoom_camera" />
         </LinearLayout>
 
+       <!-- comtenitore delle regole -->
+        <include layout="@layout/rules" />
+
         <!-- Button to start/stop capture cycle -->
         <LinearLayout
             android:layout_width="match_parent"
