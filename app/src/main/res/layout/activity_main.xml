@@ -1,9 +1,8 @@
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="horizontal">
 
     <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -22,8 +21,8 @@
             android:id="@+id/btn_switch_camera"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentTop="true"
             android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
             android:layout_margin="16dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/switch_camera"
@@ -34,11 +33,11 @@
             android:id="@+id/camera_selection_buttons"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_alignParentEnd="true"
             android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
             android:layout_marginTop="50dp"
-            android:layout_marginEnd="16dp">
+            android:layout_marginEnd="16dp"
+            android:orientation="vertical">
 
             <!-- Wide Camera Button -->
             <ImageButton
@@ -67,19 +66,26 @@
                 android:contentDescription="@string/zoom_camera"
                 android:src="@drawable/zoom_camera" />
         </LinearLayout>
+
+        <!-- Button to start/stop capture cycle -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal|bottom"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="10dp">
+            <ImageButton
+                android:id="@+id/btn_capture_cycle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:layout_gravity="center_horizontal|bottom"
+                android:background="@null"
+                android:src="?android:attr/selectableItemBackgroundBorderless"
+                app:tint="@color/white" />
+
+            <include layout="@layout/rules_buttons" />
+        </LinearLayout>
     </RelativeLayout>
-
-    <!-- Button to start/stop capture cycle -->
-    <ImageButton
-        android:id="@+id/btn_capture_cycle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal|bottom"
-        android:layout_centerHorizontal="true"
-        android:background="@null"
-        android:src="?android:attr/selectableItemBackgroundBorderless"
-        app:tint="@color/white" />
-
-    <include layout="@layout/rules" />
 
 </LinearLayout>

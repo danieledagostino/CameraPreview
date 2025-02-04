@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        RulesManager rulesManager = new RulesManager(this);
+        //RulesManager rulesManager = new RulesManager(this);
     }
 
     @Override

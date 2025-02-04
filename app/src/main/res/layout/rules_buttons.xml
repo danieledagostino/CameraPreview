@@ -1,0 +1,41 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center|bottom">
+
+    <ImageButton
+        android:id="@+id/isoButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@null"
+        android:src="@drawable/baseline_iso_24" />
+
+    <ImageButton
+        android:id="@+id/shutterButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@null"
+        android:src="@drawable/shutter_speed_24dp" />
+
+    <ImageButton
+        android:id="@+id/focusButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@null"
+        android:src="@drawable/filter_center_focus_24dp" />
+
+    <ImageButton
+        android:id="@+id/exposureButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@null"
+        android:src="@drawable/light_mode_24dp" />
+
+    <ImageButton
+        android:id="@+id/intervalButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@null"
+        android:src="@drawable/timer_5_shutter_24dp" />
+</LinearLayout>
