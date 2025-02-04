@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+    <!-- Etichetta e righello per interi -->
+    <TextView
+        android:id="@+id/label_integers"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Interi: "
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <org.dd.camerapreview.draggableruler.DraggableRulerView
+        android:id="@+id/ruler_integers"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Etichetta e righello per stringhe -->
+    <TextView
+        android:id="@+id/label_strings"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Stringhe: "
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <org.dd.camerapreview.draggableruler.DraggableRulerView
+        android:id="@+id/ruler_strings"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Etichetta e righello per float -->
+    <TextView
+        android:id="@+id/label_floats"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Float: "
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <org.dd.camerapreview.draggableruler.DraggableRulerView
+        android:id="@+id/ruler_floats"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Etichetta e righello per alfanumerico -->
+    <TextView
+        android:id="@+id/label_alphanumeric"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Alfanumerico: "
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <org.dd.camerapreview.draggableruler.DraggableRulerView
+        android:id="@+id/ruler_alphanumeric"
+        android:layout_width="match_parent"
+        android:layout_height="100dp" />
+
+</LinearLayout>
