@@ -10,16 +10,15 @@
 
     <!-- Etichetta e righello per interi -->
     <FrameLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/isoMeterViewContainer"
+        style="@style/CustomFrameLayoutStyle"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:padding="0dp"
+        android:layout_marginBottom="10dp"
         android:background="@drawable/ruler_border">
+
         <TextView
+            android:id="@+id/isoLabel"
             style="@style/CustomTextViewStyle"
             android:text="Interi: " />
 
@@ -34,11 +33,11 @@
         android:id="@+id/shutterMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        style="@style/CustomFrameLayoutStyle"
+        android:layout_marginBottom="10dp"
         android:background="@drawable/ruler_border">
         <TextView
+            android:id="@+id/shutterLabel"
             style="@style/CustomTextViewStyle"
             android:text="Stringhe: " />
 
@@ -53,11 +52,11 @@
         android:id="@+id/focusMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        style="@style/CustomFrameLayoutStyle"
+        android:layout_marginBottom="10dp"
         android:background="@drawable/ruler_border">
         <TextView
+            android:id="@+id/focusLabel"
             style="@style/CustomTextViewStyle"
             android:text="Float: " />
 
@@ -72,11 +71,11 @@
         android:id="@+id/exposureMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        style="@style/CustomFrameLayoutStyle"
+        android:layout_marginBottom="10dp"
         android:background="@drawable/ruler_border">
         <TextView
+            android:id="@+id/exposureLabel"
             style="@style/CustomTextViewStyle"
             android:text="Alfanumerico: " />
 
@@ -91,11 +90,11 @@
         android:id="@+id/intervalMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        android:layout_marginBottom="16dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
+        style="@style/CustomFrameLayoutStyle"
+        android:layout_marginBottom="10dp"
         android:background="@drawable/ruler_border">
         <TextView
+            android:id="@+id/intervalLabel"
             style="@style/CustomTextViewStyle"
             android:text="Alfanumerico: " />
 

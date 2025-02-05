@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.appcompat.widget.AppCompatImageButton;
 
@@ -30,15 +31,16 @@ public class RulesManager {
         this.mainActivity = activity;
         this.paramters = paramters;
 
-        setupIconAndDraggableRuler(R.id.isoButton, R.id.ruler_iso, R.id.isoMeterViewContainer, paramters.get(Camera2Manager.SENSITIVITY_RANGE), value -> isoValue = value, "ISO");
-        setupIconAndDraggableRuler(R.id.shutterButton, R.id.ruler_shutter, R.id.shutterMeterViewContainer, paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> shutterSpeed = value, "Shutter");
-        setupIconAndDraggableRuler(R.id.focusButton, R.id.ruler_focus, R.id.focusMeterViewContainer, paramters.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS), value -> focusValue = value, "Focus");
-        setupIconAndDraggableRuler(R.id.exposureButton, R.id.ruler_exposure, R.id.exposureMeterViewContainer, paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> exposureValue = value, "Exposure");
-        setupIconAndDraggableRuler(R.id.intervalButton, R.id.ruler_interval, R.id.intervalMeterViewContainer, paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), value -> intervalValue = value, "Interval");
+        setupIconAndDraggableRuler(R.id.isoButton, R.id.ruler_iso, R.id.isoMeterViewContainer, R.id.isoLabel, paramters.get(Camera2Manager.SENSITIVITY_RANGE), value -> isoValue = value, "ISO");
+        setupIconAndDraggableRuler(R.id.shutterButton, R.id.ruler_shutter, R.id.shutterMeterViewContainer, R.id.shutterLabel, paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> shutterSpeed = value, "Shutter");
+        setupIconAndDraggableRuler(R.id.focusButton, R.id.ruler_focus, R.id.focusMeterViewContainer, R.id.focusLabel, paramters.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS), value -> focusValue = value, "Focus");
+        setupIconAndDraggableRuler(R.id.exposureButton, R.id.ruler_exposure, R.id.exposureMeterViewContainer, R.id.exposureLabel, paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> exposureValue = value, "Exposure");
+        setupIconAndDraggableRuler(R.id.intervalButton, R.id.ruler_interval, R.id.intervalMeterViewContainer, R.id.intervalLabel, paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), value -> intervalValue = value, "Interval");
     }
 
-    private void setupIconAndDraggableRuler(int buttonId, int draggableMeterId, int meterViewContainerId, List<String> values, ValueChangeListener listener, String label) {
+    private void setupIconAndDraggableRuler(int buttonId, int draggableMeterId, int meterViewContainerId, int labelId, List<String> values, ValueChangeListener listener, String label) {
         AppCompatImageButton button = mainActivity.findViewById(buttonId);
+        TextView labelView = mainActivity.findViewById(labelId);
         DraggableRulerView meterView = mainActivity.findViewById(draggableMeterId);
         FrameLayout meterViewContainer = mainActivity.findViewById(meterViewContainerId);
 
@@ -55,6 +57,8 @@ public class RulesManager {
 
             // Show/hide the seekbar associated with this button
             meterViewContainer.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
+            labelView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
+            meterView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
 
             // Check if all values are false and hide the container if they are
             if (allValuesAreFalse(imageButtonsVisibility)) {
