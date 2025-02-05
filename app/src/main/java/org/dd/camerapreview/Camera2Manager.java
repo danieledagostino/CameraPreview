@@ -497,4 +497,63 @@ public class Camera2Manager {
             return "";
         }
     }
+
+    public Map<Integer, String> getCurrentCameraConfig() {
+        Map<Integer, String> cameraConfig = new HashMap<>();
+
+        try {
+            String cameraId = cameraManager.getCameraIdList()[0]; // Prendi il primo ID della fotocamera
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+
+            // Ottieni la gamma di ISO supportata dalla fotocamera
+            Range<Integer> isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+            if (isoRange != null) {
+                cameraConfig.put(SENSITIVITY_RANGE, String.valueOf(isoRange));
+            }
+
+            // Ottieni la gamma del tempo di esposizione supportata dalla fotocamera
+            Range<Long> exposureRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+            if (exposureRange != null) {
+                cameraConfig.put(EXPOSURE_TIME_RANGE, String.valueOf(exposureRange));
+            }
+
+            // Ottieni la distanza minima di messa a fuoco
+            Float minFocusDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
+            if (minFocusDistance != null) {
+                cameraConfig.put(LENS_MINIMUM_FOCUS_DISTANCE, String.valueOf(minFocusDistance));
+            }
+
+            // Ottieni il range di compensazione dell'esposizione automatica (AE)
+            Range<Integer> aeCompensationRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
+            if (aeCompensationRange != null) {
+                cameraConfig.put(AE_COMPENSATION_RANGE, String.valueOf(aeCompensationRange));
+            }
+
+            // Ottieni i focal lengths disponibili
+            float[] focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+            if (focalLengths != null) {
+                cameraConfig.put(LENS_AVAILABLE_FOCAL_LENGTHS, String.valueOf(focalLengths));
+            }
+
+            // Ottieni la durata massima del frame
+            Long maxFrameDuration = characteristics.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+            if (maxFrameDuration != null) {
+                cameraConfig.put(SENSOR_MAX_FRAME_DURATION, String.valueOf(maxFrameDuration));
+            }
+
+            // Ottieni altre informazioni utili, come l'orientamento del sensore
+            Integer sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+            if (sensorOrientation != null) {
+                cameraConfig.put(7, String.valueOf(sensorOrientation));
+            }
+
+            // Restituisce la mappa con tutte le configurazioni raccolte
+            return cameraConfig;
+
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+            return new HashMap<>(); // Se si verifica un errore, restituisce una mappa vuota
+        }
+    }
+
 }

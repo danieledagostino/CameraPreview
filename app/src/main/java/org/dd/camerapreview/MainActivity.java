@@ -26,8 +26,9 @@ public class MainActivity extends AppCompatActivity {
             cameraConfigManager = new CameraConfigManager(this);
 
             Map<Integer, List> parameters = camera2Manager.getMinMaxCameraParameters();
+            Map<Integer, String> currentCameraConfigs = camera2Manager.getCurrentCameraConfig();
             cameraConfigManager.insertConfig(parameters);
-            RulesManager rulesManager = new RulesManager(this, parameters);
+            RulesManager rulesManager = new RulesManager(this, parameters, currentCameraConfigs);
         } catch (CameraAccessException e) {
             throw new RuntimeException(e);
         }

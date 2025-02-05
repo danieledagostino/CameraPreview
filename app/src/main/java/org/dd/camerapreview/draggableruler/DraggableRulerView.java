@@ -56,6 +56,16 @@ public class DraggableRulerView extends View {
         invalidate(); // Ridisegna la View
     }
 
+    // Metodo pubblico per impostare un valore iniziale
+    public void setInitialValue(String initialValue) {
+        if (customValues != null && customValues.contains(initialValue)) {
+            int index = customValues.indexOf(initialValue);
+            // Calcola l'offset in base all'indice del valore selezionato
+            offsetX = index * step;
+            invalidate(); // Ridisegna la View per visualizzare il valore iniziale
+        }
+    }
+
     // Interfaccia per il listener
     public interface OnRulerPositionChangeListener {
         void onPositionChanged(String value);
