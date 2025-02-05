@@ -1,53 +1,83 @@
 package org.dd.camerapreview;
 
 import android.app.Activity;
-import android.widget.TextView;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+
+import androidx.appcompat.widget.AppCompatImageButton;
 
 import org.dd.camerapreview.draggableruler.DraggableRulerView;
 
-import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class RulesManager {
 
-    Activity mainActivity;
+    private int isoValue = 100;
+    private int shutterSpeed = 1; // in seconds
+    private int focusValue = 50;
+    private int exposureValue = 0;
+    private int intervalValue = 60; // in seconds
 
-    public RulesManager(Activity activity) {
+    private Activity mainActivity;
+    private Map<Integer, List> paramters = null;
+    private Map<Integer, Boolean> imageButtonsVisibility = new HashMap<>();
+
+    public RulesManager(Activity activity, Map<Integer, List> paramters) {
         this.mainActivity = activity;
-        // Configurazione righello 1 (interi)
-        DraggableRulerView rulerIntegers = mainActivity.findViewById(R.id.ruler_integers);
-        setupRuler(rulerIntegers, Arrays.asList("10", "20", "30", "40", "50"), "Interi: ");
+        this.paramters = paramters;
 
-        // Configurazione righello 2 (stringhe)
-        DraggableRulerView rulerStrings = mainActivity.findViewById(R.id.ruler_strings);
-        setupRuler(rulerStrings, Arrays.asList("A", "B", "C", "D", "E"), "Stringhe: ");
-
-        // Configurazione righello 3 (float)
-        DraggableRulerView rulerFloats = mainActivity.findViewById(R.id.ruler_floats);
-        setupRuler(rulerFloats, Arrays.asList("1.1", "2.2", "3.3", "4.4", "5.5"), "Float: ");
-
-        // Configurazione righello 4 (alfanumerico)
-        DraggableRulerView rulerAlphanumeric = mainActivity.findViewById(R.id.ruler_alphanumeric);
-        setupRuler(rulerAlphanumeric, Arrays.asList("1A", "2B", "3C", "4D", "5E"), "Alfanumerico: ");
+        setupIconAndDraggableRuler(R.id.isoButton, R.id.ruler_iso, R.id.isoMeterViewContainer, paramters.get(Camera2Manager.SENSITIVITY_RANGE), value -> isoValue = value, "ISO");
+        setupIconAndDraggableRuler(R.id.shutterButton, R.id.ruler_shutter, R.id.shutterMeterViewContainer, paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> shutterSpeed = value, "Shutter");
+        setupIconAndDraggableRuler(R.id.focusButton, R.id.ruler_focus, R.id.focusMeterViewContainer, paramters.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS), value -> focusValue = value, "Focus");
+        setupIconAndDraggableRuler(R.id.exposureButton, R.id.ruler_exposure, R.id.exposureMeterViewContainer, paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> exposureValue = value, "Exposure");
+        setupIconAndDraggableRuler(R.id.intervalButton, R.id.ruler_interval, R.id.intervalMeterViewContainer, paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), value -> intervalValue = value, "Interval");
     }
 
-    private void setupRuler(DraggableRulerView ruler, List<String> values, String label) {
-        ruler.setCustomValues(values);
-        ruler.setOnRulerPositionChangeListener(value -> {
-            TextView labelView = mainActivity.findViewById(getLabelIdByRuler(ruler));
-            labelView.setText(label + value);
-        });
-    }
+    private void setupIconAndDraggableRuler(int buttonId, int draggableMeterId, int meterViewContainerId, List<String> values, ValueChangeListener listener, String label) {
+        AppCompatImageButton button = mainActivity.findViewById(buttonId);
+        DraggableRulerView meterView = mainActivity.findViewById(draggableMeterId);
+        FrameLayout meterViewContainer = mainActivity.findViewById(meterViewContainerId);
 
-    private int getLabelIdByRuler(DraggableRulerView ruler) {
-        if (ruler.getId() == R.id.ruler_integers) {
-            return R.id.label_integers;
-        } else if (ruler.getId() == R.id.ruler_strings) {
-            return R.id.label_strings;
-        } else if (ruler.getId() == R.id.ruler_floats) {
-            return R.id.label_floats;
-        } else {
-            return R.id.label_alphanumeric;
+        meterView.setCustomValues(values);
+        // Initialize the visibility state for this button if it's not already in the map
+        if (!imageButtonsVisibility.containsKey(buttonId)) {
+            imageButtonsVisibility.put(buttonId, false);
         }
+
+        button.setOnClickListener(v -> {
+            // Toggle the visibility state for this button
+            boolean currentVisibility = imageButtonsVisibility.get(buttonId);
+            imageButtonsVisibility.put(buttonId, !currentVisibility);
+
+            // Show/hide the seekbar associated with this button
+            meterViewContainer.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
+
+            // Check if all values are false and hide the container if they are
+            if (allValuesAreFalse(imageButtonsVisibility)) {
+                meterViewContainer.setVisibility(View.GONE);
+            } else {
+                meterViewContainer.setVisibility(View.VISIBLE);
+            }
+        });
+
     }
+
+    interface ValueChangeListener {
+        void onValueChange(int value);
+    }
+
+    private boolean allValuesAreFalse(Map<Integer, Boolean> map) {
+        Collection<Boolean> values = map.values();
+        for (Boolean value : values) {
+            if (value) {
+                return false; // Found a true value, so not all are false
+            }
+        }
+        return true; // All values were false
+    }
+
 }

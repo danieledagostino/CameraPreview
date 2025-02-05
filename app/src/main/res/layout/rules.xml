@@ -11,6 +11,7 @@
     <!-- Etichetta e righello per interi -->
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/isoMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_marginBottom="16dp"
@@ -20,17 +21,17 @@
         android:background="@drawable/ruler_border">
         <TextView
             style="@style/CustomTextViewStyle"
-            android:id="@+id/label_integers"
             android:text="Interi: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
-            android:id="@+id/ruler_integers"
+            android:id="@+id/ruler_iso"
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
     <!-- Etichetta e righello per stringhe -->
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/shutterMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_marginBottom="16dp"
@@ -38,18 +39,18 @@
         android:layout_marginEnd="8dp"
         android:background="@drawable/ruler_border">
         <TextView
-            android:id="@+id/label_strings"
             style="@style/CustomTextViewStyle"
             android:text="Stringhe: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
-            android:id="@+id/ruler_strings"
+            android:id="@+id/ruler_shutter"
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
     <!-- Etichetta e righello per float -->
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/focusMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_marginBottom="16dp"
@@ -57,18 +58,18 @@
         android:layout_marginEnd="8dp"
         android:background="@drawable/ruler_border">
         <TextView
-            android:id="@+id/label_floats"
             style="@style/CustomTextViewStyle"
             android:text="Float: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
-            android:id="@+id/ruler_floats"
+            android:id="@+id/ruler_focus"
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
     <!-- Etichetta e righello per alfanumerico -->
     <FrameLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/exposureMeterViewContainer"
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_marginBottom="16dp"
@@ -76,12 +77,30 @@
         android:layout_marginEnd="8dp"
         android:background="@drawable/ruler_border">
         <TextView
-            android:id="@+id/label_alphanumeric"
             style="@style/CustomTextViewStyle"
             android:text="Alfanumerico: " />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
-            android:id="@+id/ruler_alphanumeric"
+            android:id="@+id/ruler_exposure"
+            style="@style/CustomDraggableRulerStyle" />
+    </FrameLayout>
+
+    <!-- Etichetta e righello per alfanumerico -->
+    <FrameLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/intervalMeterViewContainer"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_marginBottom="16dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/ruler_border">
+        <TextView
+            style="@style/CustomTextViewStyle"
+            android:text="Alfanumerico: " />
+
+        <org.dd.camerapreview.draggableruler.DraggableRulerView
+            android:id="@+id/ruler_interval"
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 

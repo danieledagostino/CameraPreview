@@ -13,6 +13,8 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Range;
+import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
@@ -21,7 +23,12 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 
 public class Camera2Manager {
 
@@ -36,6 +43,17 @@ public class Camera2Manager {
     private TextureView textureView;
     private boolean isBackCamera = true;
     private boolean isCapturing = false;
+
+    public final static Integer EXPOSURE_TIME_RANGE = 1; //Acquisition time
+    public final static List<Long> EXPOSURE_VALUES_NS = Arrays.asList(25_000_000L, 100_000_000L, 250_000_000L, 1_000_000_000L, 10_000_000_000L, 25_000_000_000L, 30_000_000_000L, 50_000_000_000L, 100_000_000_000L);
+    public final static Integer SENSITIVITY_RANGE = 2; //ISO
+    public final static List<Integer> SENSITIVITY_VALUES = Arrays.asList(100, 200, 400, 800, 1600, 3200, 6400);
+    public final static Integer LENS_MINIMUM_FOCUS_DISTANCE = 3;
+
+    public final static Integer AE_COMPENSATION_RANGE = 4;
+    public final static List<Integer> AE_COMPENSATION_RANGE_VALUES = Arrays.asList(-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6);
+    public final static Integer LENS_AVAILABLE_FOCAL_LENGTHS = 5;
+    public final static Integer SENSOR_MAX_FRAME_DURATION = 6;
 
     private List<String> capturedImagePaths = new ArrayList<>();
 
@@ -353,5 +371,130 @@ public class Camera2Manager {
     int getCameraSensorOrientation(CameraCharacteristics characteristics) {
         Integer cameraOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
         return (360 - (cameraOrientation != null ? cameraOrientation : 0)) % 360;
+    }
+
+    public Map<Integer, List> getMinMaxCameraParameters() throws CameraAccessException {
+
+        Map<Integer, List> results = new HashMap<>();
+        /*
+        Ecco alcuni valori comuni riscontrati su molti dispositivi:
+        ISO: Da 100 a 3200 (alcuni arrivano fino a 6400 o più).
+        Shutter Speed: Da 1/4000 secondi (~250,000 ns) a 30 secondi (~30,000,000,000 ns).
+        Focus Distance: 0.0 (infinito) a un massimo variabile, spesso 10-20 (1/m).
+        Compensazione Esposizione: Da -3 a +3 stop (con step di 1/3 stop).
+        Focale: Dipende dalla lente, spesso tra 1.0 e 8.0 mm.
+        */
+        String cameraId = cameraManager.getCameraIdList()[0];
+        CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+
+        Range<Integer> isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+        if (isoRange != null) {
+            Integer minISO = isoRange.getLower();
+            Integer maxISO = isoRange.getUpper();
+            List<String> list = new ArrayList<>();
+
+            for (Integer val : SENSITIVITY_VALUES) {
+                if (val.compareTo(minISO) >= 1 && val.compareTo(maxISO) <= 1) {
+                    list.add(String.valueOf(val));
+                }
+            }
+            results.put(SENSITIVITY_RANGE, list);
+            //log.debug("Camera", "ISO Range: " + minISO + " - " + maxISO);
+        }
+
+        Range<Long> exposureRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+        if (exposureRange != null) {
+            long minExposureTime = exposureRange.getLower();
+            long maxExposureTime = exposureRange.getUpper();
+            int denominator = 1000; // Base (es. 1 secondo = 1000 ms)
+
+            List<String> list = new ArrayList<>();
+
+            for (Long val : EXPOSURE_VALUES_NS) {
+                if (val.compareTo(minExposureTime) >= 1 && val.compareTo(maxExposureTime) <= 1) {
+                    list.add(convertToFraction(val));
+                }
+            }
+            results.put(EXPOSURE_TIME_RANGE, list);
+            //log.debug("Camera", "Exposure Time Range: " + minExposureTime + " ns - " + maxExposureTime + " ns");
+        }
+
+        Float minFocusDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
+        if (minFocusDistance != null) {
+            results.put(LENS_MINIMUM_FOCUS_DISTANCE, Arrays.asList(calculateLensType(minFocusDistance)));
+            //log.debug("Camera", "Minimum Focus Distance: " + minFocusDistance + " (1/m)");
+        }
+
+        Range<Integer> aeCompRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
+        Rational aeStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP);
+        if (aeCompRange != null && aeStep != null) {
+            int minAeComp = aeCompRange.getLower();
+            int maxAeComp = aeCompRange.getUpper();
+
+            List<String> list = new ArrayList<>();
+            for (Integer val : AE_COMPENSATION_RANGE_VALUES) {
+                if (val.compareTo(minAeComp) >= 1 && val.compareTo(maxAeComp) <= 1) {
+                    list.add(String.valueOf(val));
+                }
+            }
+            results.put(AE_COMPENSATION_RANGE, list);
+            //log.debug("Camera", "AE Compensation Range: " + minAeComp + " - " + maxAeComp + ", Step: " + aeStep);
+        }
+
+        float[] focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+        if (focalLengths != null) {
+            List<String> focalLengthsAsStrings = new ArrayList<>();
+
+            for (float focalLength : focalLengths) {
+                focalLengthsAsStrings.add(Float.toString(focalLength));
+            }
+            results.put(LENS_AVAILABLE_FOCAL_LENGTHS, focalLengthsAsStrings);
+        }
+
+        Long maxFrameDuration = characteristics.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+        if (maxFrameDuration != null) {
+            results.put(SENSOR_MAX_FRAME_DURATION, Arrays.asList(String.valueOf(maxFrameDuration)));
+            //log.debug("Camera", "Max Frame Duration: " + maxFrameDuration + " ns");
+        }
+
+
+        return results;
+    }
+
+    private String convertToFraction(long nanoseconds) {
+
+        double milliseconds = nanoseconds / 1_000_000.0;
+        int denominator = 1000;
+        int numerator = (int) Math.round(milliseconds * denominator);
+
+        int gcd = findGCD(numerator, denominator);
+        numerator /= gcd;
+        denominator /= gcd;
+
+        // Ritorna la rappresentazione "numeratore/denominatore"
+        return numerator + "/" + denominator;
+    }
+
+    private int findGCD(int a, int b) {
+        if (b == 0) {
+            return a;
+        }
+        return findGCD(b, a % b);
+    }
+
+    private String calculateLensType(double minFocusDistance) {
+        // Calcoliamo la potenza della lente (1/distanza)
+        double lensPower = 1 / minFocusDistance;
+
+        // Determiniamo il tipo di obiettivo
+        if (lensPower >= 10) {
+            return "Macro 0.1";
+        } else if (lensPower >= 3.33) {
+            return "Obiettivo medio 0.3";
+        } else if (lensPower >= 1) {
+            return "Obiettivo focale lunga 1m";
+        } else {
+            return "";
+        }
     }
 }

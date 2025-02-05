@@ -1,14 +1,19 @@
 package org.dd.camerapreview;
 
+import android.hardware.camera2.CameraAccessException;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import java.util.List;
+import java.util.Map;
+
 public class MainActivity extends AppCompatActivity {
 
     private Camera2Manager camera2Manager;
+    private CameraConfigManager cameraConfigManager;
     private boolean isCapturing = false;
 
     @Override
@@ -16,10 +21,17 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        camera2Manager = new Camera2Manager(this);
+        try {
+            camera2Manager = new Camera2Manager(this);
+            cameraConfigManager = new CameraConfigManager(this);
 
-        // Initialize the camera preview
-        //camera2Manager.setupPreview();
+            Map<Integer, List> parameters = camera2Manager.getMinMaxCameraParameters();
+            cameraConfigManager.insertConfig(parameters);
+            RulesManager rulesManager = new RulesManager(this, parameters);
+        } catch (CameraAccessException e) {
+            throw new RuntimeException(e);
+        }
+
 
         // Switch camera button
         ImageButton switchCameraButton = findViewById(R.id.btn_switch_camera);
@@ -74,7 +86,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        //RulesManager rulesManager = new RulesManager(this);
     }
 
     @Override
