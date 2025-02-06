@@ -8,7 +8,7 @@ android {
 
     defaultConfig {
         applicationId = "org.dd.camerapreview"
-        minSdk = 21
+        minSdk = 24
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -38,4 +38,5 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
+    implementation(libs.ffmpeg.kit) // Usa la libreria FFmpegKit
 }

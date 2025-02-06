@@ -4,15 +4,20 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.*;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
 import android.media.ImageReader;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.util.Log;
 import android.util.Range;
 import android.util.Rational;
 import android.util.Size;
@@ -21,6 +26,14 @@ import android.view.TextureView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+
+import com.arthenica.ffmpegkit.FFmpegKit;
+import com.arthenica.ffmpegkit.ReturnCode;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -66,6 +79,8 @@ public class Camera2Manager {
     int aeCompensation = 0;
     float focalLength = 0;
     long frameDuration = 0;
+
+    private int imageCounter = 1;
 
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
@@ -187,7 +202,7 @@ public class Camera2Manager {
             captureSession.setRepeatingRequest(builder.build(), null, backgroundHandler);
 
         } catch (CameraAccessException | NumberFormatException e) {
-            e.printStackTrace();
+            Log.e("Camera", "Error updating camera preview: ", e);
             Toast.makeText(activity, "Error updating camera preview: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
@@ -195,13 +210,14 @@ public class Camera2Manager {
     public void openCamera() {
         startBackgroundThread();
         if (textureView.isAvailable()) {
-            startBackgroundThread();
             try {
                 currentCameraId = isBackCamera ? getBackCameraId() : getFrontCameraId();
                 if (ActivityCompat.checkSelfPermission(activity, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
                     ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CAMERA}, 1);
                     return;
                 }
+                // Configura ImageReader prima di aprire la fotocamera
+                setupImageReader();
                 cameraManager.openCamera(currentCameraId, stateCallback, backgroundHandler);
             } catch (Exception e) {
                 Toast.makeText(activity, "Error opening camera: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -252,15 +268,21 @@ public class Camera2Manager {
 
     private void startPreview() {
         try {
-            Surface surface = new Surface(textureView.getSurfaceTexture());
-            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
+            Surface textureSurface = new Surface(textureView.getSurfaceTexture());
+            Surface imageReaderSurface = imageReader.getSurface();
+
+            // Crea la sessione di cattura con entrambe le superfici
+            cameraDevice.createCaptureSession(Arrays.asList(textureSurface, imageReaderSurface), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     captureSession = session;
                     try {
-                        CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                        builder.addTarget(surface);
-                        captureSession.setRepeatingRequest(builder.build(), null, backgroundHandler);
+                        // Crea una richiesta di preview
+                        CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                        previewBuilder.addTarget(textureSurface);
+
+                        // Imposta la richiesta di preview come ripetitiva
+                        captureSession.setRepeatingRequest(previewBuilder.build(), null, backgroundHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
@@ -332,16 +354,93 @@ public class Camera2Manager {
         }
     }
 
+    private void startCapture() {
+        if (cameraDevice == null || !isCapturing || captureSession == null) return;
+
+        try {
+            // Crea una richiesta di cattura
+            CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.addTarget(imageReader.getSurface());
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+
+            // Imposta l'orientamento dell'immagine
+            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
+
+            // Cattura l'immagine
+            captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                    super.onCaptureCompleted(session, request, result);
+                    // L'acquisizione è completata, il listener di ImageReader gestirà l'immagine
+                }
+            }, backgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void startCaptureCycle() {
         isCapturing = true;
-        // Logic to start capturing images cyclically
+        setupImageReader();
+        startCapture();
         Toast.makeText(activity, "Capture cycle started.", Toast.LENGTH_SHORT).show();
     }
 
     public void stopCaptureCycle() {
         isCapturing = false;
-        // Logic to stop capturing and process images into a video
+        if (imageReader != null) {
+            imageReader.close();
+            imageReader = null;
+        }
+        onCycleCompleted();
         Toast.makeText(activity, "Capture cycle stopped.", Toast.LENGTH_SHORT).show();
+    }
+
+    private int getOrientation(int rotation) {
+        switch (rotation) {
+            case Surface.ROTATION_0:
+                return 90;
+            case Surface.ROTATION_90:
+                return 0;
+            case Surface.ROTATION_180:
+                return 270;
+            case Surface.ROTATION_270:
+                return 180;
+            default:
+                return 0;
+        }
+    }
+
+    private void onCycleCompleted() {
+        // Istruzioni da eseguire quando il ciclo è completato
+        System.out.println("Ciclo completato.");
+
+        // Logic to generate the video with the captured images
+        Toast.makeText(activity, "Generating the video with " + capturedImagePaths.size() + " images...", Toast.LENGTH_LONG).show();
+
+        for (String filenanme: capturedImagePaths) {
+
+        }
+        // Assumendo che le immagini siano salvate come file nel percorso capturedImages
+        String outputPath = activity.getExternalFilesDir(null) + "/output_video.mp4";
+
+        // Genera un comando per FFmpeg
+        StringBuilder ffmpegCommand = new StringBuilder("-y -r 30 -i "); // -r 30: 30 fps
+        ffmpegCommand.append(activity.getExternalFilesDir(null)).append("capturedImage_%03d.jpg ");
+        // Input: immagini numerate es. capturedImage_001.jpg
+        ffmpegCommand.append("-c:v libx264 -pix_fmt yuv420p ").append(outputPath); // Configurazione output video
+
+        // Usa FFmpegKit per eseguire il comando
+        FFmpegKit.executeAsync(ffmpegCommand.toString(), session -> {
+            if (ReturnCode.isSuccess(session.getReturnCode())) {
+                Log.i("Camera", "Video generato con successo: " + outputPath);
+                Toast.makeText(activity, "Video generato con successo!", Toast.LENGTH_SHORT).show();
+            } else {
+                Log.i("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
+                Toast.makeText(activity, "Errore nella generazione del video.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     public void selectCamera(String cameraType) {
@@ -366,7 +465,7 @@ public class Camera2Manager {
             closeCamera();
             openCamera();
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e("Camera", "Error selecting camera: " + e);
         }
     }
 
@@ -668,4 +767,60 @@ public class Camera2Manager {
         }
     }
 
+    private void setupImageReader() {
+        // Crea un ImageReader per acquisire immagini in formato JPEG
+        imageReader = ImageReader.newInstance(textureView.getWidth(), textureView.getHeight(), ImageFormat.JPEG, 2);
+        imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
+            @Override
+            public void onImageAvailable(ImageReader reader) {
+                // Gestisci l'immagine catturata
+                Image image = reader.acquireLatestImage();
+                if (image != null) {
+                    // Salva l'immagine o esegui altre operazioni
+                    saveImage(image);
+                    image.close();
+
+                    // Se l'acquisizione ciclica è attiva, avvia una nuova acquisizione
+                    if (isCapturing) {
+                        startCapture();
+                    }
+                }
+            }
+        }, backgroundHandler);
+    }
+
+    private void saveImage(Image image) {
+        // Implementa la logica per salvare l'immagine
+        // Esempio: salva l'immagine in un file
+        // Nota: questa è una semplice implementazione, potrebbe essere necessario gestire i permessi e l'I/O su un thread separato
+        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+
+        Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+        saveCapturedImage(bitmap);
+        imageCounter++;
+        String imageName = String.format("capturedImage_%03d.jpg", imageCounter);
+        capturedImagePaths.add(imageName);
+        File file = new File(activity.getExternalFilesDir(null), imageName);
+        try (FileOutputStream output = new FileOutputStream(file)) {
+            output.write(bytes);
+
+            capturedImagePaths.add(file.getAbsolutePath());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveCapturedImage(Bitmap bitmap) {
+        String imageName = String.format("capturedImage_%03d.jpg", imageCounter);
+        String filePath = new File(activity.getExternalFilesDir(null), imageName).getAbsolutePath();
+
+        try (FileOutputStream fos = new FileOutputStream(filePath)) {
+            // Salva l'immagine nel file
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
+        } catch (IOException e) {
+            Log.e("Camera", "Error saving image", e);
+        }
+    }
 }
