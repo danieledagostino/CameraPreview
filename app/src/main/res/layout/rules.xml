@@ -19,8 +19,7 @@
 
         <TextView
             android:id="@+id/isoLabel"
-            style="@style/CustomTextViewStyle"
-            android:text="Interi: " />
+            style="@style/CustomTextViewStyle" />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_iso"
@@ -38,8 +37,7 @@
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/shutterLabel"
-            style="@style/CustomTextViewStyle"
-            android:text="Stringhe: " />
+            style="@style/CustomTextViewStyle" />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_shutter"
@@ -57,8 +55,7 @@
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/focusLabel"
-            style="@style/CustomTextViewStyle"
-            android:text="Float: " />
+            style="@style/CustomTextViewStyle" />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_focus"
@@ -76,8 +73,7 @@
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/exposureLabel"
-            style="@style/CustomTextViewStyle"
-            android:text="Alfanumerico: " />
+            style="@style/CustomTextViewStyle" />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_exposure"
@@ -95,8 +91,7 @@
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/intervalLabel"
-            style="@style/CustomTextViewStyle"
-            android:text="Alfanumerico: " />
+            style="@style/CustomTextViewStyle" />
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_interval"

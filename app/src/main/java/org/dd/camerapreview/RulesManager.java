@@ -1,6 +1,7 @@
 package org.dd.camerapreview;
 
 import android.app.Activity;
+import android.util.Log;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -24,33 +25,56 @@ public class RulesManager {
     private int intervalValue = 60; // in seconds
 
     private Activity mainActivity;
-    private Map<Integer, List> paramters = null;
+    private Map<Integer, List<String>> paramters = null;
     private Map<Integer, Boolean> imageButtonsVisibility = new HashMap<>();
     Map<Integer, String> currentCameraConfigs;
 
-    public RulesManager(Activity activity, Map<Integer, List> paramters, Map<Integer, String> currentCameraConfigs) {
+    public RulesManager(Activity activity, Map<Integer, List<String>> paramters, Map<Integer, String> currentCameraConfigs) {
         this.mainActivity = activity;
         this.paramters = paramters;
         this.currentCameraConfigs = currentCameraConfigs;
 
         setupIconAndDraggableRuler(R.id.isoButton, R.id.ruler_iso, R.id.isoMeterViewContainer, R.id.isoLabel,
-                paramters.get(Camera2Manager.SENSITIVITY_RANGE), value -> isoValue = value, "ISO", currentCameraConfigs.get(Camera2Manager.SENSITIVITY_RANGE));
+                paramters.get(Camera2Manager.SENSITIVITY_RANGE), Camera2Manager.SENSITIVITY_RANGE, "ISO", currentCameraConfigs.get(Camera2Manager.SENSITIVITY_RANGE));
         setupIconAndDraggableRuler(R.id.shutterButton, R.id.ruler_shutter, R.id.shutterMeterViewContainer, R.id.shutterLabel,
-                paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> shutterSpeed = value, "Shutter", currentCameraConfigs.get(Camera2Manager.EXPOSURE_TIME_RANGE));
+                paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), Camera2Manager.EXPOSURE_TIME_RANGE, "Shutter", currentCameraConfigs.get(Camera2Manager.EXPOSURE_TIME_RANGE));
         setupIconAndDraggableRuler(R.id.focusButton, R.id.ruler_focus, R.id.focusMeterViewContainer, R.id.focusLabel,
-                paramters.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS), value -> focusValue = value, "Focus", currentCameraConfigs.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS));
+                paramters.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS), Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS, "Focus", currentCameraConfigs.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS));
         setupIconAndDraggableRuler(R.id.exposureButton, R.id.ruler_exposure, R.id.exposureMeterViewContainer, R.id.exposureLabel,
-                paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), value -> exposureValue = value, "Exposure", currentCameraConfigs.get(Camera2Manager.EXPOSURE_TIME_RANGE));
+                paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), Camera2Manager.EXPOSURE_TIME_RANGE, "Exposure", currentCameraConfigs.get(Camera2Manager.EXPOSURE_TIME_RANGE));
         setupIconAndDraggableRuler(R.id.intervalButton, R.id.ruler_interval, R.id.intervalMeterViewContainer, R.id.intervalLabel,
-                paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), value -> intervalValue = value, "Interval", currentCameraConfigs.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION));
+                paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), Camera2Manager.SENSOR_MAX_FRAME_DURATION, "Interval", currentCameraConfigs.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION));
     }
 
-    private void setupIconAndDraggableRuler(int buttonId, int draggableMeterId, int meterViewContainerId, int labelId, List<String> values, ValueChangeListener listener, String label, String currentConfVal) {
+    private void setupIconAndDraggableRuler(int buttonId, int draggableMeterId, int meterViewContainerId, int labelId, List<String> values, int cameraConf, String label, String currentConfVal) {
         AppCompatImageButton button = mainActivity.findViewById(buttonId);
         TextView labelView = mainActivity.findViewById(labelId);
+        labelView.setText(label);
         DraggableRulerView meterView = mainActivity.findViewById(draggableMeterId);
         meterView.setCustomValues(values);
         meterView.setInitialValue(currentConfVal);
+        meterView.setOnRulerPositionChangeListener(new DraggableRulerView.OnRulerPositionChangeListener() {
+            @Override
+            public void onPositionChanged(String value) {
+                Log.d("RulesManager", "onPositionChanged: " + value + " on " + label);
+                /*
+                    ADB Comment:
+                    Qui si dovrebbe andare a cambiare i parametri della fotocamera.
+                    Stai utilizzando il package camera2 di Android che rende complesso e macchinoso modificare
+                    i parametri della fotocamera dovendo tra l'altro gestire compatibilità e funzionalità
+                    non presenti su tutti i dispositivi..
+                    Stando a quanto trovato online sarebbe più pratico utilizzare la libreria CameraX riscrivendo in
+                    toto la tua classe Camera2Manager:
+                        https://developer.android.com/media/camera/camerax
+
+                    Volendo continuare ad utilizzare Camera2 ho trovato un progetto di esempio molto molto
+                    completo ma di non facile lettura:     https://github.com/almalence/OpenCamera
+
+                 */
+                Camera2Manager.getInstance(mainActivity).updatePreview(cameraConf, value);
+            }
+        });
+
         FrameLayout meterViewContainer = mainActivity.findViewById(meterViewContainerId);
 
         // Initialize the visibility state for this button if it's not already in the map
@@ -66,7 +90,6 @@ public class RulesManager {
             // Show/hide the seekbar associated with this button
             meterViewContainer.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
             labelView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
-            labelView.setText(label);
             meterView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
 
             // Check if all values are false and hide the container if they are

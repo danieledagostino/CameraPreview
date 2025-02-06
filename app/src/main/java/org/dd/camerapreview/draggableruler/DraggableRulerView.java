@@ -8,6 +8,8 @@ import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
 
+import org.dd.camerapreview.RulerValueCameraManager;
+
 import java.util.List;
 
 public class DraggableRulerView extends View {
@@ -190,6 +192,7 @@ public class DraggableRulerView extends View {
                             ? customValues.get(index)
                             : String.valueOf(index);
                     listener.onPositionChanged(selectedValue);
+                    RulerValueCameraManager.getInstance(getContext()).insertRulerValue(getId(), selectedValue);
                 }
 
                 invalidate();

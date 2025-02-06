@@ -22,10 +22,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         try {
-            camera2Manager = new Camera2Manager(this);
-            cameraConfigManager = new CameraConfigManager(this);
+            camera2Manager = Camera2Manager.getInstance(this);
+            cameraConfigManager = CameraConfigManager.getInstance(this);
 
-            Map<Integer, List> parameters = camera2Manager.getMinMaxCameraParameters();
+            Map<Integer, List<String>> parameters = camera2Manager.getMinMaxCameraParameters();
             Map<Integer, String> currentCameraConfigs = camera2Manager.getCurrentCameraConfig();
             cameraConfigManager.insertConfig(parameters);
             RulesManager rulesManager = new RulesManager(this, parameters, currentCameraConfigs);
