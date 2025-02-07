@@ -485,9 +485,27 @@ public class Camera2Manager {
                 Log.i("Camera", "Video generato con successo: " + outputPath);
                 Toast.makeText(activity, "Video salvato in: " + outputPath, Toast.LENGTH_LONG).show();
 
-                // Aggiorna il MediaStore
-                MediaScannerConnection.scanFile(activity, new String[]{"NightLapse_" + timeStamp + ".mp4"}, null, (path, uri) -> {
+                // Aggiungi il video al MediaStore
+                MediaScannerConnection.scanFile(activity, new String[]{outputPath}, null, (path, uri) -> {
                     Log.i("MediaScanner", "File aggiunto alla galleria: " + path);
+                });
+
+                // Comando per generare la miniatura e applicare la rotazione
+                String thumbnailPath = new File(dcimDirectory, "thumbnail_" + timeStamp + ".jpg").getAbsolutePath();
+                String thumbnailCommand = new StringBuilder("-y -i ").append(outputPath)
+                        .append(" -vf \"thumbnail,transpose=1\" -frames:v 1 ").append(thumbnailPath).toString();
+
+                // Esegui il comando per generare la miniatura
+                FFmpegKit.executeAsync(thumbnailCommand, thumbnailSession -> {
+                    if (ReturnCode.isSuccess(thumbnailSession.getReturnCode())) {
+                        Log.i("Camera", "Miniatura generata con successo: " + thumbnailPath);
+                        // Aggiungi la miniatura al MediaStore
+                        MediaScannerConnection.scanFile(activity, new String[]{thumbnailPath}, null, (path, uri) -> {
+                            Log.i("MediaScanner", "Miniatura aggiunta alla galleria: " + path);
+                        });
+                    } else {
+                        Log.e("Camera", "Errore nella generazione della miniatura: " + thumbnailSession.getFailStackTrace());
+                    }
                 });
 
             } else {
@@ -500,6 +518,7 @@ public class Camera2Manager {
         closeCamera();
         openCamera();
     }
+
 
     private File getOutputDirectory() {
         File dcimDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "NightLapse");
