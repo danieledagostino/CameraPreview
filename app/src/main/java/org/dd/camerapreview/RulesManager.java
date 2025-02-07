@@ -92,12 +92,11 @@ public class RulesManager {
             labelView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
             meterView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
 
-            // Check if all values are false and hide the container if they are
+            /* // Check if all values are false and hide the container if they are
             if (allValuesAreFalse(imageButtonsVisibility)) {
                 meterViewContainer.setVisibility(View.GONE);
-            } else {
-                meterViewContainer.setVisibility(View.VISIBLE);
             }
+            */
         });
 
     }
@@ -116,4 +115,55 @@ public class RulesManager {
         return true; // All values were false
     }
 
+    public void hideAllRulers() {
+        for (Map.Entry<Integer, Boolean> entry : imageButtonsVisibility.entrySet()) {
+            int buttonId = entry.getKey();
+            imageButtonsVisibility.put(buttonId, false);
+
+            // Dichiarazione delle variabili
+            int meterViewContainerId = 0;
+            int draggableMeterId = 0;
+            int labelId = 0;
+
+            // Identifica i relativi elementi con if-else
+            if (buttonId == R.id.isoButton) {
+                meterViewContainerId = R.id.isoMeterViewContainer;
+                draggableMeterId = R.id.ruler_iso;
+                labelId = R.id.isoLabel;
+            } else if (buttonId == R.id.shutterButton) {
+                meterViewContainerId = R.id.shutterMeterViewContainer;
+                draggableMeterId = R.id.ruler_shutter;
+                labelId = R.id.shutterLabel;
+            } else if (buttonId == R.id.focusButton) {
+                meterViewContainerId = R.id.focusMeterViewContainer;
+                draggableMeterId = R.id.ruler_focus;
+                labelId = R.id.focusLabel;
+            } else if (buttonId == R.id.exposureButton) {
+                meterViewContainerId = R.id.exposureMeterViewContainer;
+                draggableMeterId = R.id.ruler_exposure;
+                labelId = R.id.exposureLabel;
+            } else if (buttonId == R.id.intervalButton) {
+                meterViewContainerId = R.id.intervalMeterViewContainer;
+                draggableMeterId = R.id.ruler_interval;
+                labelId = R.id.intervalLabel;
+            } else {
+                continue; // Se non corrisponde, passa al prossimo elemento
+            }
+
+            // Nascondi i componenti associati
+            FrameLayout meterViewContainer = mainActivity.findViewById(meterViewContainerId);
+            DraggableRulerView meterView = mainActivity.findViewById(draggableMeterId);
+            TextView labelView = mainActivity.findViewById(labelId);
+
+            if (meterViewContainer != null) {
+                meterViewContainer.setVisibility(View.GONE);
+            }
+            if (meterView != null) {
+                meterView.setVisibility(View.GONE);
+            }
+            if (labelView != null) {
+                labelView.setVisibility(View.GONE);
+            }
+        }
+    }
 }

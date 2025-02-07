@@ -14,6 +14,7 @@ public class MainActivity extends AppCompatActivity {
 
     private Camera2Manager camera2Manager;
     private CameraConfigManager cameraConfigManager;
+    private RulesManager rulesManager;
     private boolean isCapturing = false;
 
     @Override
@@ -28,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
             Map<Integer, List<String>> parameters = camera2Manager.getMinMaxCameraParameters();
             Map<Integer, String> currentCameraConfigs = camera2Manager.getCurrentCameraConfig();
             cameraConfigManager.insertConfig(parameters);
-            RulesManager rulesManager = new RulesManager(this, parameters, currentCameraConfigs);
+            rulesManager = new RulesManager(this, parameters, currentCameraConfigs);
         } catch (CameraAccessException e) {
             throw new RuntimeException(e);
         }
@@ -78,10 +79,13 @@ public class MainActivity extends AppCompatActivity {
                 if (!isCapturing) {
                     isCapturing = true;
                     camera2Manager.startCaptureCycle();
+                    captureButton.setImageResource(R.drawable.camera_on);
+                    rulesManager.hideAllRulers();
                     Toast.makeText(MainActivity.this, "Started capturing images.", Toast.LENGTH_SHORT).show();
                 } else {
                     isCapturing = false;
                     camera2Manager.stopCaptureCycle();
+                    captureButton.setImageResource(R.drawable.camera_off);
                     Toast.makeText(MainActivity.this, "Stopped capturing. Creating video.", Toast.LENGTH_SHORT).show();
                 }
             }
@@ -95,6 +99,8 @@ public class MainActivity extends AppCompatActivity {
         if (camera2Manager != null) {
             camera2Manager.closeCamera();
         }
+
+        camera2Manager = Camera2Manager.getInstance(this);
     }
 
     @Override
@@ -102,7 +108,8 @@ public class MainActivity extends AppCompatActivity {
         super.onPause();
         if (camera2Manager != null) {
             camera2Manager.closeCamera();
-            camera2Manager.closeCamera();
         }
+
+        camera2Manager = Camera2Manager.getInstance(this);
     }
 }

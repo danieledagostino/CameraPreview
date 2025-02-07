@@ -36,11 +36,14 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import android.os.Environment;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 
 public class Camera2Manager {
@@ -80,7 +83,7 @@ public class Camera2Manager {
     float focalLength = 0;
     long frameDuration = 0;
 
-    private int imageCounter = 1;
+    private int imageCounter = 0;
 
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
@@ -367,12 +370,27 @@ public class Camera2Manager {
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
 
-            // Cattura l'immagine
-            captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+            // Crea una sessione di acquisizione
+            cameraDevice.createCaptureSession(Collections.singletonList(imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
-                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-                    super.onCaptureCompleted(session, request, result);
-                    // L'acquisizione è completata, il listener di ImageReader gestirà l'immagine
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    captureSession = session;
+                    try {
+                        // Avvia la cattura dell'immagine
+                        captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                            @Override
+                            public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                                // L'immagine è stata catturata, puoi gestirla nel listener sopra
+                            }
+                        }, backgroundHandler);
+                    } catch (CameraAccessException e) {
+                        Log.e("Camera", "Error starting capture: ", e);
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                    Log.e("Camera", "Camera capture session configuration failed");
                 }
             }, backgroundHandler);
         } catch (CameraAccessException e) {
@@ -416,31 +434,42 @@ public class Camera2Manager {
         // Istruzioni da eseguire quando il ciclo è completato
         System.out.println("Ciclo completato.");
 
-        // Logic to generate the video with the captured images
+        // Messaggio Toast per avvisare l'utente
         Toast.makeText(activity, "Generating the video with " + capturedImagePaths.size() + " images...", Toast.LENGTH_LONG).show();
 
-        for (String filenanme: capturedImagePaths) {
+        // Ottieni la data e l'ora corrente per il nome del file
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
 
+        // Ottieni la directory DCIM/NightLapse
+        File dcimDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "NightLapse");
+        if (!dcimDirectory.exists() && !dcimDirectory.mkdirs()) {
+            Log.e("Camera", "Errore: impossibile creare la directory DCIM/NightLapse.");
+            Toast.makeText(activity, "Errore: impossibile creare la directory DCIM/NightLapse.", Toast.LENGTH_SHORT).show();
+            return;
         }
-        // Assumendo che le immagini siano salvate come file nel percorso capturedImages
-        String outputPath = activity.getExternalFilesDir(null) + "/output_video.mp4";
+
+        // Percorso completo del file di output
+        String outputPath = new File(dcimDirectory, "NightLapse_" + timeStamp + ".mp4").getAbsolutePath();
 
         // Genera un comando per FFmpeg
         StringBuilder ffmpegCommand = new StringBuilder("-y -r 30 -i "); // -r 30: 30 fps
-        ffmpegCommand.append(activity.getExternalFilesDir(null)).append("capturedImage_%03d.jpg ");
-        // Input: immagini numerate es. capturedImage_001.jpg
-        ffmpegCommand.append("-c:v libx264 -pix_fmt yuv420p ").append(outputPath); // Configurazione output video
+        ffmpegCommand.append(activity.getExternalFilesDir(null)).append("/capturedImage_%03d.jpg "); // Input immagini numerate
+        ffmpegCommand.append("-c:v mpeg4 -q:v 2 ").append(outputPath); // Configurazione output video
 
         // Usa FFmpegKit per eseguire il comando
         FFmpegKit.executeAsync(ffmpegCommand.toString(), session -> {
             if (ReturnCode.isSuccess(session.getReturnCode())) {
                 Log.i("Camera", "Video generato con successo: " + outputPath);
-                Toast.makeText(activity, "Video generato con successo!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(activity, "Video generato con successo! Salvato in: " + outputPath, Toast.LENGTH_LONG).show();
             } else {
-                Log.i("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
+                Log.e("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
                 Toast.makeText(activity, "Errore nella generazione del video.", Toast.LENGTH_SHORT).show();
             }
         });
+
+        // Riavvia la fotocamera
+        closeCamera();
+        openCamera();
     }
 
     public void selectCamera(String cameraType) {
