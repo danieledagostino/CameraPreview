@@ -24,6 +24,8 @@ import android.util.Rational;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -31,7 +33,10 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
+import com.arthenica.ffmpegkit.LogCallback;
 import com.arthenica.ffmpegkit.ReturnCode;
+import com.arthenica.ffmpegkit.Statistics;
+import com.arthenica.ffmpegkit.StatisticsCallback;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -48,6 +53,8 @@ import java.util.Map;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import android.media.MediaScannerConnection;
 import android.content.ContentResolver;
@@ -175,6 +182,8 @@ public class Camera2Manager {
             // Ottieni il builder per la richiesta di cattura
             CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             Surface surface = new Surface(textureView.getSurfaceTexture());
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+
             builder.addTarget(surface);
 
             // Applica la configurazione in base al valore di cameraConf
@@ -385,45 +394,52 @@ public class Camera2Manager {
         }
     }
 
+    private ExecutorService captureExecutorService;
+
     private void startCapture() {
         if (cameraDevice == null || !isCapturing || captureSession == null) return;
 
-        try {
-            // Crea una richiesta di cattura
-            CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-            captureBuilder.addTarget(imageReader.getSurface());
-            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+        // Crea un thread separato per gestire la cattura dell'immagine
+        captureExecutorService = Executors.newSingleThreadExecutor();
+        captureExecutorService.execute(() -> {
+            try {
+                // Crea una richiesta di cattura
+                CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+                captureBuilder.addTarget(imageReader.getSurface());
+                captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
 
-            // Imposta l'orientamento dell'immagine
-            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
+                // Imposta l'orientamento dell'immagine
+                int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
 
-            // Crea una sessione di acquisizione
-            cameraDevice.createCaptureSession(Collections.singletonList(imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession session) {
-                    captureSession = session;
-                    try {
-                        // Avvia la cattura dell'immagine
-                        captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
-                            @Override
-                            public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-                                // L'immagine è stata catturata, puoi gestirla nel listener sopra
-                            }
-                        }, backgroundHandler);
-                    } catch (CameraAccessException e) {
-                        Log.e("Camera", "Error starting capture: ", e);
+                // Crea una sessione di acquisizione nel thread di background
+                cameraDevice.createCaptureSession(Collections.singletonList(imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
+                    @Override
+                    public void onConfigured(@NonNull CameraCaptureSession session) {
+                        captureSession = session;
+                        try {
+                            // Avvia la cattura dell'immagine
+                            captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                                @Override
+                                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                                    // L'immagine è stata catturata, gestisci qui se necessario
+                                }
+                            }, backgroundHandler);
+                        } catch (CameraAccessException e) {
+                            Log.e("Camera", "Error starting capture: ", e);
+                        }
                     }
-                }
 
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                    Log.e("Camera", "Camera capture session configuration failed");
-                }
-            }, backgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
+                    @Override
+                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                        Log.e("Camera", "Camera capture session configuration failed");
+                    }
+                }, backgroundHandler);
+            } catch (CameraAccessException e) {
+                Log.e("Camera", "Error during capture setup: ", e);
+            }
+        });
+
     }
 
     public void startCaptureCycle() {
@@ -446,6 +462,7 @@ public class Camera2Manager {
             imageReader.close();
             imageReader = null;
         }
+        captureExecutorService.shutdown();
         onCycleCompleted();
         Toast.makeText(activity, "Capture cycle stopped.", Toast.LENGTH_SHORT).show();
     }
@@ -486,55 +503,73 @@ public class Camera2Manager {
                 .append(activity.getExternalFilesDir(null)).append("/capturedImage_%03d.jpg ")
                 .append("-vf \"transpose=1\" -c:v mpeg4 -pix_fmt yuv420p ").append(outputPath);
 
-        FFmpegKit.executeAsync(ffmpegCommand.toString(), session -> {
-            if (ReturnCode.isSuccess(session.getReturnCode())) {
-                Log.i("Camera", "Video generato con successo: " + outputPath);
-                activity.runOnUiThread(() ->
-                        Toast.makeText(activity, "Video salvato in: " + outputPath, Toast.LENGTH_LONG).show()
-                );
+        // Esegui in un thread separato
+        new Thread(() -> {
+            // Mostra la barra di progresso nel thread principale
+            activity.runOnUiThread(() -> {
+                ProgressBar progressBar = activity.findViewById(R.id.progressBar);
+                progressBar.setVisibility(View.VISIBLE);
+                progressBar.setProgress(0);
+            });
 
-                // Aggiungi il video al MediaStore per API 29+ o usa MediaScanner per versioni inferiori
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    addToMediaStore(outputPath, "video/mp4");
-                } else {
-                    MediaScannerConnection.scanFile(activity, new String[]{outputPath}, null, (path, uri) -> {
-                        Log.i("MediaScanner", "File aggiunto alla galleria: " + path);
-                    });
-                }
+            // Calcola la durata totale del video in secondi
+            int totalFrames = capturedImagePaths.size();
+            int frameRate = 30; // Frame rate definito nel comando FFmpeg
+            int estimatedDuration = totalFrames / frameRate; // Durata stimata in secondi
 
-                // Comando per generare la miniatura e applicare la rotazione
-                String thumbnailPath = new File(dcimDirectory, "thumbnail_" + timeStamp + ".jpg").getAbsolutePath();
-                String thumbnailCommand = new StringBuilder("-y -i ").append(outputPath)
-                        .append(" -vf \"thumbnail,transpose=1\" -frames:v 1 ").append(thumbnailPath).toString();
-
-                // Esegui il comando per generare la miniatura
-                FFmpegKit.executeAsync(thumbnailCommand, thumbnailSession -> {
-                    if (ReturnCode.isSuccess(thumbnailSession.getReturnCode())) {
-                        Log.i("Camera", "Miniatura generata con successo: " + thumbnailPath);
-                        // Aggiungi la miniatura al MediaStore
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                            addToMediaStore(thumbnailPath, "image/jpeg");
-                        } else {
-                            MediaScannerConnection.scanFile(activity, new String[]{thumbnailPath}, null, (path, uri) -> {
-                                Log.i("MediaScanner", "Miniatura aggiunta alla galleria: " + path);
-                            });
-                        }
-                    } else {
-                        Log.e("Camera", "Errore nella generazione della miniatura: " + thumbnailSession.getFailStackTrace());
-                    }
+            FFmpegKit.executeAsync(ffmpegCommand.toString(), session -> {
+                activity.runOnUiThread(() -> {
+                    ProgressBar progressBar = activity.findViewById(R.id.progressBar);
+                    progressBar.setVisibility(View.GONE);
                 });
 
-            } else {
-                Log.e("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
-                activity.runOnUiThread(() ->
-                        Toast.makeText(activity, "Errore nella generazione del video.", Toast.LENGTH_SHORT).show()
-                );
-            }
-        });
+                if (ReturnCode.isSuccess(session.getReturnCode())) {
+                    Log.i("Camera", "Video generato con successo: " + outputPath);
+                    activity.runOnUiThread(() ->
+                            Toast.makeText(activity, "Video salvato in: " + outputPath, Toast.LENGTH_LONG).show()
+                    );
 
-        // Riavvia la fotocamera
-        closeCamera();
-        openCamera();
+                    // Aggiungi il video al MediaStore per API 29+ o usa MediaScanner per versioni inferiori
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        addToMediaStore(outputPath, "video/mp4");
+                    } else {
+                        MediaScannerConnection.scanFile(activity, new String[]{outputPath}, null, (path, uri) -> {
+                            Log.i("MediaScanner", "File aggiunto alla galleria: " + path);
+                        });
+                    }
+                } else {
+                    Log.e("Camera", "Errore nella generazione del video. Return code: " + session.getReturnCode());
+                    Log.e("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
+                    activity.runOnUiThread(() ->
+                            Toast.makeText(activity, "Errore nella generazione del video.", Toast.LENGTH_SHORT).show()
+                    );
+                }
+            }, new LogCallback() {
+                @Override
+                public void apply(com.arthenica.ffmpegkit.Log log) {
+                    Log.i("FFmpeg", log.getMessage());
+                }
+            }, new StatisticsCallback() {
+                @Override
+                public void apply(Statistics statistics) {
+                    long currentFrame = statistics.getVideoFrameNumber();
+
+                    if (totalFrames > 0) {
+                        // Calcola la percentuale e aggiorna la ProgressBar nel thread principale
+                        int progress = (int) ((currentFrame * 100) / totalFrames);
+                        activity.runOnUiThread(() -> {
+                            ProgressBar progressBar = activity.findViewById(R.id.progressBar);
+                            progressBar.setVisibility(View.VISIBLE); // Mostra la ProgressBar
+                            progressBar.setProgress(progress);
+                        });
+                    }
+                }
+            });
+
+            // Riavvia la fotocamera
+            closeCamera();
+            openCamera();
+        }).start();
     }
 
     @TargetApi(Build.VERSION_CODES.Q)

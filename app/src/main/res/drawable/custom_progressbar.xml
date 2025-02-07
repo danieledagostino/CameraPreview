@@ -1,0 +1,17 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background (grigio chiaro) -->
+    <item android:right="2dp" android:left="2dp">
+        <shape>
+            <solid android:color="#e0e0e0"/>
+            <corners android:radius="8dp"/>
+        </shape>
+    </item>
+
+    <!-- Progress (blu o il colore che preferisci) -->
+    <item>
+        <shape>
+            <solid android:color="#3b5998"/> <!-- Cambia il colore -->
+            <corners android:radius="8dp"/>
+        </shape>
+    </item>
+</layer-list>
