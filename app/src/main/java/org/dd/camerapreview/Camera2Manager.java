@@ -36,7 +36,9 @@ import com.arthenica.ffmpegkit.ReturnCode;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -48,8 +50,12 @@ import java.util.Date;
 import java.util.Locale;
 
 import android.media.MediaScannerConnection;
-
-
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.MediaStore;
+import android.annotation.TargetApi;
 public class Camera2Manager {
 
     private final Activity activity;
@@ -483,12 +489,18 @@ public class Camera2Manager {
         FFmpegKit.executeAsync(ffmpegCommand.toString(), session -> {
             if (ReturnCode.isSuccess(session.getReturnCode())) {
                 Log.i("Camera", "Video generato con successo: " + outputPath);
-                Toast.makeText(activity, "Video salvato in: " + outputPath, Toast.LENGTH_LONG).show();
+                activity.runOnUiThread(() ->
+                        Toast.makeText(activity, "Video salvato in: " + outputPath, Toast.LENGTH_LONG).show()
+                );
 
-                // Aggiungi il video al MediaStore
-                MediaScannerConnection.scanFile(activity, new String[]{outputPath}, null, (path, uri) -> {
-                    Log.i("MediaScanner", "File aggiunto alla galleria: " + path);
-                });
+                // Aggiungi il video al MediaStore per API 29+ o usa MediaScanner per versioni inferiori
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    addToMediaStore(outputPath, "video/mp4");
+                } else {
+                    MediaScannerConnection.scanFile(activity, new String[]{outputPath}, null, (path, uri) -> {
+                        Log.i("MediaScanner", "File aggiunto alla galleria: " + path);
+                    });
+                }
 
                 // Comando per generare la miniatura e applicare la rotazione
                 String thumbnailPath = new File(dcimDirectory, "thumbnail_" + timeStamp + ".jpg").getAbsolutePath();
@@ -500,9 +512,13 @@ public class Camera2Manager {
                     if (ReturnCode.isSuccess(thumbnailSession.getReturnCode())) {
                         Log.i("Camera", "Miniatura generata con successo: " + thumbnailPath);
                         // Aggiungi la miniatura al MediaStore
-                        MediaScannerConnection.scanFile(activity, new String[]{thumbnailPath}, null, (path, uri) -> {
-                            Log.i("MediaScanner", "Miniatura aggiunta alla galleria: " + path);
-                        });
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                            addToMediaStore(thumbnailPath, "image/jpeg");
+                        } else {
+                            MediaScannerConnection.scanFile(activity, new String[]{thumbnailPath}, null, (path, uri) -> {
+                                Log.i("MediaScanner", "Miniatura aggiunta alla galleria: " + path);
+                            });
+                        }
                     } else {
                         Log.e("Camera", "Errore nella generazione della miniatura: " + thumbnailSession.getFailStackTrace());
                     }
@@ -510,7 +526,9 @@ public class Camera2Manager {
 
             } else {
                 Log.e("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
-                Toast.makeText(activity, "Errore nella generazione del video.", Toast.LENGTH_SHORT).show();
+                activity.runOnUiThread(() ->
+                        Toast.makeText(activity, "Errore nella generazione del video.", Toast.LENGTH_SHORT).show()
+                );
             }
         });
 
@@ -519,6 +537,28 @@ public class Camera2Manager {
         openCamera();
     }
 
+    @TargetApi(Build.VERSION_CODES.Q)
+    private void addToMediaStore(String filePath, String mimeType) {
+        ContentValues values = new ContentValues();
+        values.put(MediaStore.MediaColumns.DISPLAY_NAME, new File(filePath).getName()); // Nome del file
+        values.put(MediaStore.MediaColumns.MIME_TYPE, mimeType); // Tipo MIME
+        values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_MOVIES); // Cartella in cui salvare il file
+
+        ContentResolver resolver = activity.getContentResolver();
+        Uri uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values);
+
+        if (uri != null) {
+            try (OutputStream out = resolver.openOutputStream(uri)) {
+                // Copia il contenuto del file esistente nel nuovo URI
+                Files.copy(new File(filePath).toPath(), out);
+                Log.i("MediaStore", "File aggiunto correttamente: " + filePath);
+            } catch (IOException e) {
+                Log.e("MediaStore", "Errore durante la copia del file: " + e.getMessage());
+            }
+        } else {
+            Log.e("MediaStore", "Errore nell'aggiungere il file al MediaStore");
+        }
+    }
 
     private File getOutputDirectory() {
         File dcimDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "NightLapse");
