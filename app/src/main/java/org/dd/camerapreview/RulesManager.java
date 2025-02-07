@@ -50,6 +50,7 @@ public class RulesManager {
         AppCompatImageButton button = mainActivity.findViewById(buttonId);
         TextView labelView = mainActivity.findViewById(labelId);
         labelView.setText(label);
+        FrameLayout meterViewContainer = mainActivity.findViewById(meterViewContainerId);
         DraggableRulerView meterView = mainActivity.findViewById(draggableMeterId);
         meterView.setCustomValues(values);
         meterView.setInitialValue(currentConfVal);
@@ -57,25 +58,9 @@ public class RulesManager {
             @Override
             public void onPositionChanged(String value) {
                 Log.d("RulesManager", "onPositionChanged: " + value + " on " + label);
-                /*
-                    ADB Comment:
-                    Qui si dovrebbe andare a cambiare i parametri della fotocamera.
-                    Stai utilizzando il package camera2 di Android che rende complesso e macchinoso modificare
-                    i parametri della fotocamera dovendo tra l'altro gestire compatibilità e funzionalità
-                    non presenti su tutti i dispositivi..
-                    Stando a quanto trovato online sarebbe più pratico utilizzare la libreria CameraX riscrivendo in
-                    toto la tua classe Camera2Manager:
-                        https://developer.android.com/media/camera/camerax
-
-                    Volendo continuare ad utilizzare Camera2 ho trovato un progetto di esempio molto molto
-                    completo ma di non facile lettura:     https://github.com/almalence/OpenCamera
-
-                 */
                 Camera2Manager.getInstance(mainActivity).updatePreview(cameraConf, value);
             }
         });
-
-        FrameLayout meterViewContainer = mainActivity.findViewById(meterViewContainerId);
 
         // Initialize the visibility state for this button if it's not already in the map
         if (!imageButtonsVisibility.containsKey(buttonId)) {
@@ -89,16 +74,34 @@ public class RulesManager {
 
             // Show/hide the seekbar associated with this button
             meterViewContainer.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
+            meterViewContainer.setBackgroundResource(R.drawable.active_border);
             labelView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
             meterView.setVisibility(imageButtonsVisibility.get(buttonId) ? View.VISIBLE : View.GONE);
 
-            /* // Check if all values are false and hide the container if they are
-            if (allValuesAreFalse(imageButtonsVisibility)) {
-                meterViewContainer.setVisibility(View.GONE);
+            // Check if all values are false and hide the container if they are
+            for (Integer key : imageButtonsVisibility.keySet()) {
+                if (key != buttonId) {
+                    FrameLayout otherContainer = mainActivity.findViewById(getContainerIdForButton(key));
+                    otherContainer.setBackgroundResource(R.drawable.ruler_border); // Rimuovi evidenziazione
+                }
             }
-            */
         });
+    }
 
+    private int getContainerIdForButton(int buttonId) {
+        if (buttonId == R.id.isoButton) {
+            return R.id.isoMeterViewContainer;
+        } else if (buttonId == R.id.shutterButton) {
+            return R.id.shutterMeterViewContainer;
+        } else if (buttonId == R.id.focusButton) {
+            return R.id.focusMeterViewContainer;
+        } else if (buttonId == R.id.exposureButton) {
+            return R.id.exposureMeterViewContainer;
+        } else if (buttonId == R.id.intervalButton) {
+            return R.id.intervalMeterViewContainer;
+        } else {
+            return -1;
+        }
     }
 
     interface ValueChangeListener {

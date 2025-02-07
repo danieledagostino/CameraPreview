@@ -15,6 +15,7 @@ import android.hardware.camera2.*;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
@@ -26,6 +27,8 @@ import android.view.TextureView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 
 import com.arthenica.ffmpegkit.FFmpegKit;
 import com.arthenica.ffmpegkit.ReturnCode;
@@ -40,10 +43,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import android.os.Environment;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+
+import android.media.MediaScannerConnection;
 
 
 public class Camera2Manager {
@@ -84,6 +88,10 @@ public class Camera2Manager {
     long frameDuration = 0;
 
     private int imageCounter = 0;
+
+    Map<Integer, String> currentSettings;
+
+    private CaptureRequest previewRequest; // Aggiungi questa variabile a livello di classe
 
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
@@ -269,6 +277,13 @@ public class Camera2Manager {
         }
     };
 
+    private final MutableLiveData<Map<Integer, String>> parametersReady = new MutableLiveData<>();
+
+
+    public LiveData<Map<Integer, String>> isPreviewConfigured() {
+        return parametersReady;
+    }
+
     private void startPreview() {
         try {
             Surface textureSurface = new Surface(textureView.getSurfaceTexture());
@@ -280,12 +295,17 @@ public class Camera2Manager {
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     captureSession = session;
                     try {
-                        // Crea una richiesta di preview
+                        // Crea una richiesta di anteprima
                         CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                         previewBuilder.addTarget(textureSurface);
 
+                        previewRequest = previewBuilder.build();
+                        setCurrentCameraSettings(previewRequest);
+
                         // Imposta la richiesta di preview come ripetitiva
-                        captureSession.setRepeatingRequest(previewBuilder.build(), null, backgroundHandler);
+                        captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
+
+                        parametersReady.postValue(currentSettings);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
@@ -300,6 +320,7 @@ public class Camera2Manager {
             e.printStackTrace();
         }
     }
+
 
     public void switchCamera() {
         isBackCamera = !isBackCamera;
@@ -326,6 +347,7 @@ public class Camera2Manager {
         if (captureSession != null) {
             captureSession.close();
             captureSession = null;
+
         }
         if (cameraDevice != null) {
             cameraDevice.close();
@@ -401,6 +423,13 @@ public class Camera2Manager {
     public void startCaptureCycle() {
         isCapturing = true;
         setupImageReader();
+        // Ottieni la directory temporanea
+        File tempDirectory = activity.getExternalFilesDir(null);
+
+        // Pulisci la cartella temporanea prima di iniziare un nuovo ciclo
+        if (tempDirectory != null) {
+            clearTemporaryFolder(tempDirectory);
+        }
         startCapture();
         Toast.makeText(activity, "Capture cycle started.", Toast.LENGTH_SHORT).show();
     }
@@ -431,36 +460,36 @@ public class Camera2Manager {
     }
 
     private void onCycleCompleted() {
-        // Istruzioni da eseguire quando il ciclo è completato
         System.out.println("Ciclo completato.");
 
-        // Messaggio Toast per avvisare l'utente
-        Toast.makeText(activity, "Generating the video with " + capturedImagePaths.size() + " images...", Toast.LENGTH_LONG).show();
-
-        // Ottieni la data e l'ora corrente per il nome del file
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-
-        // Ottieni la directory DCIM/NightLapse
-        File dcimDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "NightLapse");
-        if (!dcimDirectory.exists() && !dcimDirectory.mkdirs()) {
-            Log.e("Camera", "Errore: impossibile creare la directory DCIM/NightLapse.");
-            Toast.makeText(activity, "Errore: impossibile creare la directory DCIM/NightLapse.", Toast.LENGTH_SHORT).show();
+        if (capturedImagePaths.isEmpty()) {
+            Toast.makeText(activity, "Nessuna immagine catturata per generare il video.", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        // Percorso completo del file di output
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        File dcimDirectory = getOutputDirectory();
+
+        if (dcimDirectory == null) {
+            Toast.makeText(activity, "Errore: impossibile accedere alla directory.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         String outputPath = new File(dcimDirectory, "NightLapse_" + timeStamp + ".mp4").getAbsolutePath();
+        StringBuilder ffmpegCommand = new StringBuilder("-y -r 30 -i ")
+                .append(activity.getExternalFilesDir(null)).append("/capturedImage_%03d.jpg ")
+                .append("-vf \"transpose=1\" -c:v mpeg4 -pix_fmt yuv420p ").append(outputPath);
 
-        // Genera un comando per FFmpeg
-        StringBuilder ffmpegCommand = new StringBuilder("-y -r 30 -i "); // -r 30: 30 fps
-        ffmpegCommand.append(activity.getExternalFilesDir(null)).append("/capturedImage_%03d.jpg "); // Input immagini numerate
-        ffmpegCommand.append("-c:v mpeg4 -q:v 2 ").append(outputPath); // Configurazione output video
-
-        // Usa FFmpegKit per eseguire il comando
         FFmpegKit.executeAsync(ffmpegCommand.toString(), session -> {
             if (ReturnCode.isSuccess(session.getReturnCode())) {
                 Log.i("Camera", "Video generato con successo: " + outputPath);
-                Toast.makeText(activity, "Video generato con successo! Salvato in: " + outputPath, Toast.LENGTH_LONG).show();
+                Toast.makeText(activity, "Video salvato in: " + outputPath, Toast.LENGTH_LONG).show();
+
+                // Aggiorna il MediaStore
+                MediaScannerConnection.scanFile(activity, new String[]{"NightLapse_" + timeStamp + ".mp4"}, null, (path, uri) -> {
+                    Log.i("MediaScanner", "File aggiunto alla galleria: " + path);
+                });
+
             } else {
                 Log.e("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
                 Toast.makeText(activity, "Errore nella generazione del video.", Toast.LENGTH_SHORT).show();
@@ -471,6 +500,21 @@ public class Camera2Manager {
         closeCamera();
         openCamera();
     }
+
+    private File getOutputDirectory() {
+        File dcimDirectory = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "NightLapse");
+
+        // Crea la directory se non esiste
+        if (!dcimDirectory.exists()) {
+            if (!dcimDirectory.mkdirs()) {
+                Log.e("Camera", "Errore: impossibile creare la directory DCIM/NightLapse.");
+                return null;
+            }
+        }
+
+        return dcimDirectory;
+    }
+
 
     public void selectCamera(String cameraType) {
         try {
@@ -738,63 +782,54 @@ public class Camera2Manager {
         }
     }
 
-    public Map<Integer, String> getCurrentCameraConfig() {
-        Map<Integer, String> cameraConfig = new HashMap<>();
+    public Map<Integer, String> getCurrentCameraSettings() {
+        return currentSettings;
+    }
 
-        try {
-            String cameraId = cameraManager.getCameraIdList()[0]; // Prendi il primo ID della fotocamera
-            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+    public void setCurrentCameraSettings(CaptureRequest previewRequest) {
+        currentSettings = new HashMap<>();
 
-            // Ottieni la gamma di ISO supportata dalla fotocamera
-            Range<Integer> isoRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
-            if (isoRange != null) {
-                cameraConfig.put(SENSITIVITY_RANGE, String.valueOf(isoRange));
-            }
+        if (previewRequest == null) {
+            throw new IllegalStateException("La richiesta di anteprima non è stata ancora configurata. Assicurati che la sessione sia avviata.");
+        }
 
-            // Ottieni la gamma del tempo di esposizione supportata dalla fotocamera
-            Range<Long> exposureRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
-            if (exposureRange != null) {
-                cameraConfig.put(EXPOSURE_TIME_RANGE, String.valueOf(exposureRange));
-            }
+        // Ottieni il valore corrente di ISO
+        Integer isoValue = previewRequest.get(CaptureRequest.SENSOR_SENSITIVITY);
+        if (isoValue != null) {
+            currentSettings.put(SENSITIVITY_RANGE, String.valueOf(isoValue));
+        }
 
-            // Ottieni la distanza minima di messa a fuoco
-            Float minFocusDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
-            if (minFocusDistance != null) {
-                cameraConfig.put(LENS_MINIMUM_FOCUS_DISTANCE, String.valueOf(minFocusDistance));
-            }
+        // Ottieni il tempo di esposizione corrente
+        Long exposureTime = previewRequest.get(CaptureRequest.SENSOR_EXPOSURE_TIME);
+        if (exposureTime != null) {
+            currentSettings.put(EXPOSURE_TIME_RANGE, String.valueOf(exposureTime));
+        }
 
-            // Ottieni il range di compensazione dell'esposizione automatica (AE)
-            Range<Integer> aeCompensationRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
-            if (aeCompensationRange != null) {
-                cameraConfig.put(AE_COMPENSATION_RANGE, String.valueOf(aeCompensationRange));
-            }
+        // Ottieni la distanza corrente di messa a fuoco
+        Float focusDistance = previewRequest.get(CaptureRequest.LENS_FOCUS_DISTANCE);
+        if (focusDistance != null) {
+            currentSettings.put(LENS_MINIMUM_FOCUS_DISTANCE, String.valueOf(focusDistance));
+        }
 
-            // Ottieni i focal lengths disponibili
-            float[] focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
-            if (focalLengths != null) {
-                cameraConfig.put(LENS_AVAILABLE_FOCAL_LENGTHS, String.valueOf(focalLengths));
-            }
+        // Ottieni il valore corrente di compensazione dell'esposizione automatica (AE)
+        Integer aeCompensation = previewRequest.get(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION);
+        if (aeCompensation != null) {
+            currentSettings.put(AE_COMPENSATION_RANGE, String.valueOf(aeCompensation));
+        }
 
-            // Ottieni la durata massima del frame
-            Long maxFrameDuration = characteristics.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
-            if (maxFrameDuration != null) {
-                cameraConfig.put(SENSOR_MAX_FRAME_DURATION, String.valueOf(maxFrameDuration));
-            }
+        // Ottieni la lunghezza focale corrente
+        Float focalLength = previewRequest.get(CaptureRequest.LENS_FOCAL_LENGTH);
+        if (focalLength != null) {
+            currentSettings.put(LENS_AVAILABLE_FOCAL_LENGTHS, String.valueOf(focalLength));
+        }
 
-            // Ottieni altre informazioni utili, come l'orientamento del sensore
-            Integer sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
-            if (sensorOrientation != null) {
-                cameraConfig.put(7, String.valueOf(sensorOrientation));
-            }
-
-            // Restituisce la mappa con tutte le configurazioni raccolte
-            return cameraConfig;
-
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-            return new HashMap<>(); // Se si verifica un errore, restituisce una mappa vuota
+        // Ottieni la durata corrente del frame
+        Long frameDuration = previewRequest.get(CaptureRequest.SENSOR_FRAME_DURATION);
+        if (frameDuration != null) {
+            currentSettings.put(SENSOR_MAX_FRAME_DURATION, String.valueOf(frameDuration));
         }
     }
+
 
     private void setupImageReader() {
         // Crea un ImageReader per acquisire immagini in formato JPEG
@@ -850,6 +885,21 @@ public class Camera2Manager {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 100, fos);
         } catch (IOException e) {
             Log.e("Camera", "Error saving image", e);
+        }
+    }
+
+    private void clearTemporaryFolder(File tempDirectory) {
+        if (tempDirectory != null && tempDirectory.isDirectory()) {
+            File[] files = tempDirectory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile() && file.getName().startsWith("capturedImage_")) {
+                        if (!file.delete()) {
+                            Log.w("Camera", "Impossibile eliminare il file: " + file.getAbsolutePath());
+                        }
+                    }
+                }
+            }
         }
     }
 }

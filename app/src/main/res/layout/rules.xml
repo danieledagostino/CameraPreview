@@ -15,6 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="100dp"
         android:layout_marginBottom="10dp"
+        android:visibility="gone"
         android:background="@drawable/ruler_border">
 
         <TextView
@@ -28,12 +29,12 @@
 
     <!-- Etichetta e righello per stringhe -->
     <FrameLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/shutterMeterViewContainer"
+        style="@style/CustomFrameLayoutStyle"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        style="@style/CustomFrameLayoutStyle"
         android:layout_marginBottom="10dp"
+        android:visibility="gone"
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/shutterLabel"
@@ -46,12 +47,12 @@
 
     <!-- Etichetta e righello per float -->
     <FrameLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/focusMeterViewContainer"
+        style="@style/CustomFrameLayoutStyle"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        style="@style/CustomFrameLayoutStyle"
         android:layout_marginBottom="10dp"
+        android:visibility="gone"
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/focusLabel"
@@ -64,12 +65,12 @@
 
     <!-- Etichetta e righello per alfanumerico -->
     <FrameLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/exposureMeterViewContainer"
+        style="@style/CustomFrameLayoutStyle"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        style="@style/CustomFrameLayoutStyle"
         android:layout_marginBottom="10dp"
+        android:visibility="gone"
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/exposureLabel"
@@ -82,12 +83,12 @@
 
     <!-- Etichetta e righello per alfanumerico -->
     <FrameLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
         android:id="@+id/intervalMeterViewContainer"
+        style="@style/CustomFrameLayoutStyle"
         android:layout_width="match_parent"
         android:layout_height="100dp"
-        style="@style/CustomFrameLayoutStyle"
         android:layout_marginBottom="10dp"
+        android:visibility="gone"
         android:background="@drawable/ruler_border">
         <TextView
             android:id="@+id/intervalLabel"

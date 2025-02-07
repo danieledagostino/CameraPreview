@@ -11,7 +11,7 @@
         <item name="android:padding">8dp</item>
         <item name="android:layout_marginBottom">20dp</item>
         <item name="android:background">@drawable/ruler_border</item>
-        <item name="android:visibility">gone</item>
+        <!-- <item name="android:visibility">gone</item> -->
     </style>
 
     <!-- Stile comune per TextView -->

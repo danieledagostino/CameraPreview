@@ -1,7 +1,5 @@
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="#80FFFFFF"/> <!-- Riempimento bianco con 50% di trasparenza -->
-    <stroke
-        android:width="2dp"
-        android:color="#FF000000"/> <!-- Bordo nero opaco -->
-    <corners android:radius="8dp"/> <!-- Angoli arrotondati -->
+    <solid android:color="#FFFFFF"/>
+    <stroke android:color="#B0B0B0" android:width="1dp"/>
+    <corners android:radius="8dp"/>
 </shape>
