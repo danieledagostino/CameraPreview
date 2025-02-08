@@ -157,31 +157,6 @@ public class Camera2Manager {
 
     }
 
-    private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
-        @Override
-        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
-            // La superficie è pronta, apri la fotocamera
-            openCamera();
-        }
-
-        @Override
-        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
-            // Gestisci eventuali modifiche di dimensione, se necessario
-        }
-
-        @Override
-        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
-            // Rilascia risorse della fotocamera
-            closeCamera();
-            return true;
-        }
-
-        @Override
-        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
-            // Non richiesto in questo caso
-        }
-    };
-
     public void openCamera() {
         startBackgroundThread();
         if (textureView.isAvailable()) {
@@ -221,26 +196,6 @@ public class Camera2Manager {
         return null;
     }
 
-    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
-        @Override
-        public void onOpened(@NonNull CameraDevice camera) {
-            cameraDevice = camera;
-            startPreview();
-        }
-
-        @Override
-        public void onDisconnected(@NonNull CameraDevice camera) {
-            camera.close();
-            cameraDevice = null;
-        }
-
-        @Override
-        public void onError(@NonNull CameraDevice camera, int error) {
-            camera.close();
-            cameraDevice = null;
-        }
-    };
-
     private final MutableLiveData<Map<Integer, String>> parametersReady = new MutableLiveData<>();
 
 
@@ -252,21 +207,6 @@ public class Camera2Manager {
         isBackCamera = !isBackCamera;
         closeCamera();
         openCamera();
-    }
-
-    public void selectWideCamera() {
-        // Logic to switch to wide camera (if available)
-        Toast.makeText(activity, "Wide camera selected.", Toast.LENGTH_SHORT).show();
-    }
-
-    public void selectStandardCamera() {
-        // Logic to switch to standard camera
-        Toast.makeText(activity, "Standard camera selected.", Toast.LENGTH_SHORT).show();
-    }
-
-    public void selectZoomCamera() {
-        // Logic to switch to zoom camera (if available)
-        Toast.makeText(activity, "Zoom camera selected.", Toast.LENGTH_SHORT).show();
     }
 
     public void closeCamera() {
@@ -317,6 +257,51 @@ public class Camera2Manager {
             // Formatta il tempo e aggiornalo nel TextView
             String time = String.format("%02d:%02d:%02d", hours, minutes, seconds);
             timeTextView.setText(time);
+        }
+    };
+
+    private final CameraDevice.StateCallback stateCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(@NonNull CameraDevice camera) {
+            cameraDevice = camera;
+            startPreview();
+        }
+
+        @Override
+        public void onDisconnected(@NonNull CameraDevice camera) {
+            camera.close();
+            cameraDevice = null;
+        }
+
+        @Override
+        public void onError(@NonNull CameraDevice camera, int error) {
+            camera.close();
+            cameraDevice = null;
+        }
+    };
+
+    private final TextureView.SurfaceTextureListener textureListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+            // La superficie è pronta, apri la fotocamera
+            openCamera();
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture surface, int width, int height) {
+            // Gestisci eventuali modifiche di dimensione, se necessario
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture surface) {
+            // Rilascia risorse della fotocamera
+            closeCamera();
+            return true;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture surface) {
+            // Non richiesto in questo caso
         }
     };
 
@@ -403,7 +388,7 @@ public class Camera2Manager {
 
                         parametersReady.postValue(currentSettings);
                     } catch (CameraAccessException e) {
-                        e.printStackTrace();
+                       Log.e("Camera", "Error starting preview: ", e);
                     }
                 }
 
