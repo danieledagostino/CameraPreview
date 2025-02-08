@@ -4,6 +4,7 @@ import android.hardware.camera2.CameraAccessException;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -16,11 +17,13 @@ public class MainActivity extends AppCompatActivity {
     private CameraConfigManager cameraConfigManager;
     private RulesManager rulesManager;
     private boolean isCapturing = false;
+    private TextView timeTextView; // TextView per visualizzare il tempo del video
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        timeTextView = findViewById(R.id.timeTextView);
 
         try {
             camera2Manager = Camera2Manager.getInstance(this);
@@ -62,8 +65,9 @@ public class MainActivity extends AppCompatActivity {
             if (!isCapturing) {
                 isCapturing = true;
                 camera2Manager.startCaptureCycle();
-                captureButton.setImageResource(R.drawable.camera_on);
+                captureButton.setImageResource(R.drawable.camera_off);
                 rulesManager.hideAllRulers();
+                timeTextView.setVisibility(View.VISIBLE);
                 Toast.makeText(MainActivity.this, "Started capturing images.", Toast.LENGTH_SHORT).show();
 
                 // Disabilita gli altri bottoni
@@ -75,9 +79,10 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 isCapturing = false;
                 camera2Manager.stopCaptureCycle();
-                captureButton.setImageResource(R.drawable.camera_off);
+                captureButton.setImageResource(R.drawable.camera_on);
                 Toast.makeText(MainActivity.this, "Stopped capturing. Creating video.", Toast.LENGTH_SHORT).show();
 
+                timeTextView.setVisibility(View.GONE);
                 // Riabilita gli altri bottoni
                 switchCameraButton.setEnabled(true);
                 wideCameraButton.setEnabled(true);

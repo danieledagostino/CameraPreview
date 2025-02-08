@@ -14,6 +14,18 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <!-- Time Display -->
+        <TextView
+            android:id="@+id/timeTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00:00"
+            android:textSize="24sp"
+            android:textColor="@android:color/white"
+            android:layout_alignParentTop="true"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="16dp" />
+
         <!-- Button to switch camera -->
         <ImageButton
             android:id="@+id/btn_switch_camera"

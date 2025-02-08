@@ -18,6 +18,7 @@ import android.media.ImageReader;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 import android.util.Range;
 import android.util.Rational;
@@ -25,7 +26,9 @@ import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -106,6 +109,12 @@ public class Camera2Manager {
 
     private CaptureRequest previewRequest; // Aggiungi questa variabile a livello di classe
 
+    private long startTime;
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private TextView timeTextView; // TextView per visualizzare il tempo del video
+    private int fps = 30; // Fotogrammi per secondo del video
+    private ExecutorService captureExecutorService;
+
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
             instance = new Camera2Manager(activity);
@@ -116,6 +125,7 @@ public class Camera2Manager {
     public Camera2Manager(Activity activity) {
         this.activity = activity;
         textureView = activity.findViewById(R.id.camera_preview);
+        timeTextView = activity.findViewById(R.id.timeTextView);
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
 
         // Imposta il SurfaceTextureListener
@@ -394,7 +404,20 @@ public class Camera2Manager {
         }
     }
 
-    private ExecutorService captureExecutorService;
+    private Runnable updateTimeRunnable = new Runnable() {
+        @Override
+        public void run() {
+            // Calcola il tempo di video in secondi
+            long videoTime = imageCounter / fps; // Tempo del video in secondi
+            long seconds = videoTime % 60;
+            long minutes = (videoTime / 60) % 60;
+            long hours = (videoTime / 3600);
+
+            // Formatta il tempo e aggiornalo nel TextView
+            String time = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+            timeTextView.setText(time);
+        }
+    };
 
     private void startCapture() {
         if (cameraDevice == null || !isCapturing || captureSession == null) return;
@@ -422,7 +445,8 @@ public class Camera2Manager {
                             captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
                                 @Override
                                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-                                    // L'immagine è stata catturata, gestisci qui se necessario
+                                    // Aggiorna il tempo del video
+                                    handler.post(updateTimeRunnable);
                                 }
                             }, backgroundHandler);
                         } catch (CameraAccessException e) {
@@ -439,7 +463,6 @@ public class Camera2Manager {
                 Log.e("Camera", "Error during capture setup: ", e);
             }
         });
-
     }
 
     public void startCaptureCycle() {
@@ -452,6 +475,7 @@ public class Camera2Manager {
         if (tempDirectory != null) {
             clearTemporaryFolder(tempDirectory);
         }
+        activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         startCapture();
         Toast.makeText(activity, "Capture cycle started.", Toast.LENGTH_SHORT).show();
     }
@@ -462,6 +486,8 @@ public class Camera2Manager {
             imageReader.close();
             imageReader = null;
         }
+        activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        handler.removeCallbacks(updateTimeRunnable);
         captureExecutorService.shutdown();
         onCycleCompleted();
         Toast.makeText(activity, "Capture cycle stopped.", Toast.LENGTH_SHORT).show();
