@@ -182,67 +182,6 @@ public class Camera2Manager {
         }
     };
 
-
-    public void updatePreview(int cameraConf, String value) {
-        if (captureSession == null || cameraDevice == null) {
-            return; // Se la sessione o la fotocamera non sono inizializzate, esci
-        }
-
-        try {
-            // Ottieni il builder per la richiesta di cattura
-            CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            Surface surface = new Surface(textureView.getSurfaceTexture());
-            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
-
-            builder.addTarget(surface);
-
-            // Applica la configurazione in base al valore di cameraConf
-            switch (cameraConf) {
-                case EXPOSURE_TIME_RANGE:
-                    exposureTime = convertToNanoseconds(value);
-                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
-                    break;
-
-                case SENSITIVITY_RANGE:
-                    sensitivity = Integer.parseInt(value);
-                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity);
-                    break;
-
-                case LENS_MINIMUM_FOCUS_DISTANCE:
-                    focusDistance = Float.parseFloat(value);
-                    builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
-                    break;
-
-                case AE_COMPENSATION_RANGE:
-                    aeCompensation = Integer.parseInt(value);
-                    builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
-                    break;
-
-                case LENS_AVAILABLE_FOCAL_LENGTHS:
-                    focalLength = Float.parseFloat(value);
-                    builder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
-                    break;
-
-                case SENSOR_MAX_FRAME_DURATION:
-                    frameDuration = Long.parseLong(value);
-                    builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
-                    break;
-
-                default:
-                    // Configurazione non supportata
-                    Toast.makeText(activity, "Unsupported camera configuration", Toast.LENGTH_SHORT).show();
-                    return;
-            }
-
-            // Applica la nuova configurazione alla sessione di cattura
-            captureSession.setRepeatingRequest(builder.build(), null, backgroundHandler);
-
-        } catch (CameraAccessException | NumberFormatException e) {
-            Log.e("Camera", "Error updating camera preview: ", e);
-            Toast.makeText(activity, "Error updating camera preview: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
     public void openCamera() {
         startBackgroundThread();
         if (textureView.isAvailable()) {
@@ -308,44 +247,6 @@ public class Camera2Manager {
     public LiveData<Map<Integer, String>> isPreviewConfigured() {
         return parametersReady;
     }
-
-    private void startPreview() {
-        try {
-            Surface textureSurface = new Surface(textureView.getSurfaceTexture());
-            Surface imageReaderSurface = imageReader.getSurface();
-
-            // Crea la sessione di cattura con entrambe le superfici
-            cameraDevice.createCaptureSession(Arrays.asList(textureSurface, imageReaderSurface), new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession session) {
-                    captureSession = session;
-                    try {
-                        // Crea una richiesta di anteprima
-                        CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                        previewBuilder.addTarget(textureSurface);
-
-                        previewRequest = previewBuilder.build();
-                        setCurrentCameraSettings(previewRequest);
-
-                        // Imposta la richiesta di preview come ripetitiva
-                        captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
-
-                        parametersReady.postValue(currentSettings);
-                    } catch (CameraAccessException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                    Toast.makeText(activity, "Preview configuration failed.", Toast.LENGTH_SHORT).show();
-                }
-            }, backgroundHandler);
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
 
     public void switchCamera() {
         isBackCamera = !isBackCamera;
@@ -418,6 +319,103 @@ public class Camera2Manager {
             timeTextView.setText(time);
         }
     };
+
+    public void updatePreview(int cameraConf, String value) {
+        if (captureSession == null || cameraDevice == null) {
+            return; // Se la sessione o la fotocamera non sono inizializzate, esci
+        }
+
+        try {
+            // Ottieni il builder per la richiesta di cattura
+            CaptureRequest.Builder builder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            Surface surface = new Surface(textureView.getSurfaceTexture());
+            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF);
+
+            builder.addTarget(surface);
+
+            // Applica la configurazione in base al valore di cameraConf
+            switch (cameraConf) {
+                case EXPOSURE_TIME_RANGE:
+                    exposureTime = convertToNanoseconds(value);
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
+                    break;
+
+                case SENSITIVITY_RANGE:
+                    sensitivity = Integer.parseInt(value);
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity);
+                    break;
+
+                case LENS_MINIMUM_FOCUS_DISTANCE:
+                    focusDistance = Float.parseFloat(value);
+                    builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
+                    break;
+
+                case AE_COMPENSATION_RANGE:
+                    aeCompensation = Integer.parseInt(value);
+                    builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
+                    break;
+
+                case LENS_AVAILABLE_FOCAL_LENGTHS:
+                    focalLength = Float.parseFloat(value);
+                    builder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
+                    break;
+
+                case SENSOR_MAX_FRAME_DURATION:
+                    frameDuration = Long.parseLong(value);
+                    builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
+                    break;
+
+                default:
+                    // Configurazione non supportata
+                    Toast.makeText(activity, "Unsupported camera configuration", Toast.LENGTH_SHORT).show();
+                    return;
+            }
+
+            // Applica la nuova configurazione alla sessione di cattura
+            captureSession.setRepeatingRequest(builder.build(), null, backgroundHandler);
+
+        } catch (CameraAccessException | NumberFormatException e) {
+            Log.e("Camera", "Error updating camera preview: ", e);
+            Toast.makeText(activity, "Error updating camera preview: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void startPreview() {
+        try {
+            Surface textureSurface = new Surface(textureView.getSurfaceTexture());
+            Surface imageReaderSurface = imageReader.getSurface();
+
+            // Crea la sessione di cattura con entrambe le superfici
+            cameraDevice.createCaptureSession(Arrays.asList(textureSurface, imageReaderSurface), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    captureSession = session;
+                    try {
+                        // Crea una richiesta di anteprima
+                        CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                        previewBuilder.addTarget(textureSurface);
+
+                        previewRequest = previewBuilder.build();
+                        setCurrentCameraSettings(previewRequest);
+
+                        // Imposta la richiesta di preview come ripetitiva
+                        captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
+
+                        parametersReady.postValue(currentSettings);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                    Toast.makeText(activity, "Preview configuration failed.", Toast.LENGTH_SHORT).show();
+                }
+            }, backgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void startCapture() {
         if (cameraDevice == null || !isCapturing || captureSession == null) return;
