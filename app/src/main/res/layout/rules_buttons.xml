@@ -38,4 +38,11 @@
         android:layout_height="48dp"
         android:background="@null"
         android:src="@drawable/timer_5_shutter_24dp" />
+
+    <ImageButton
+        android:id="@+id/durationButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@null"
+        android:src="@drawable/timer_24dp" />
 </LinearLayout>

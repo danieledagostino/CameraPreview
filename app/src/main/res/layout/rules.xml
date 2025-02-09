@@ -27,7 +27,7 @@
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
-    <!-- Etichetta e righello per stringhe -->
+    <!-- Etichetta e righello per tempo dell'otturatore -->
     <FrameLayout
         android:id="@+id/shutterMeterViewContainer"
         style="@style/CustomFrameLayoutStyle"
@@ -45,7 +45,7 @@
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
-    <!-- Etichetta e righello per float -->
+    <!-- Etichetta e righello per messa a fuoco -->
     <FrameLayout
         android:id="@+id/focusMeterViewContainer"
         style="@style/CustomFrameLayoutStyle"
@@ -63,7 +63,7 @@
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
-    <!-- Etichetta e righello per alfanumerico -->
+    <!-- Etichetta e righello per tempo di esposizione -->
     <FrameLayout
         android:id="@+id/exposureMeterViewContainer"
         style="@style/CustomFrameLayoutStyle"
@@ -81,7 +81,7 @@
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 
-    <!-- Etichetta e righello per alfanumerico -->
+    <!-- Etichetta e righello per intervallo fra un frame e l'altro -->
     <FrameLayout
         android:id="@+id/intervalMeterViewContainer"
         style="@style/CustomFrameLayoutStyle"
@@ -96,6 +96,24 @@
 
         <org.dd.camerapreview.draggableruler.DraggableRulerView
             android:id="@+id/ruler_interval"
+            style="@style/CustomDraggableRulerStyle" />
+    </FrameLayout>
+
+    <!-- Etichetta e righello per durata intera registrazione -->
+    <FrameLayout
+        android:id="@+id/durationMeterViewContainer"
+        style="@style/CustomFrameLayoutStyle"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:layout_marginBottom="10dp"
+        android:visibility="gone"
+        android:background="@drawable/ruler_border">
+        <TextView
+            android:id="@+id/durationLabel"
+            style="@style/CustomTextViewStyle" />
+
+        <org.dd.camerapreview.draggableruler.DraggableRulerView
+            android:id="@+id/ruler_duration"
             style="@style/CustomDraggableRulerStyle" />
     </FrameLayout>
 

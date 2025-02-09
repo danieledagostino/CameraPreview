@@ -81,7 +81,7 @@ public class Camera2Manager {
     private boolean isCapturing = false;
 
     public final static int EXPOSURE_TIME_RANGE = 1; //Acquisition time
-    public final static List<Long> EXPOSURE_VALUES_NS = Arrays.asList(25_000_000L, 100_000_000L, 250_000_000L, 1_000_000_000L, 10_000_000_000L, 25_000_000_000L, 30_000_000_000L, 50_000_000_000L, 100_000_000_000L);
+    public final static List<Long> EXPOSURE_VALUES_NS = Arrays.asList(25_000_000L, 100_000_000L, 250_000_000L, 1_000_000_000L, 10_000_000_000L, 25_000_000_000L);
     public final static int SENSITIVITY_RANGE = 2; //ISO
     public final static List<Integer> SENSITIVITY_VALUES = Arrays.asList(100, 200, 400, 800, 1600, 3200, 6400);
     public final static int LENS_MINIMUM_FOCUS_DISTANCE = 3;
@@ -90,6 +90,8 @@ public class Camera2Manager {
     public final static List<Integer> AE_COMPENSATION_RANGE_VALUES = Arrays.asList(-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6);
     public final static int LENS_AVAILABLE_FOCAL_LENGTHS = 5;
     public final static int SENSOR_MAX_FRAME_DURATION = 6;
+    public final static int DURATION = 7;
+    public final static List<String> DURATION_VALUES = Arrays.asList("10sec", "30sec", "1min", "3min", "5min", "10min");
 
     private List<String> capturedImagePaths = new ArrayList<>();
 
@@ -102,6 +104,7 @@ public class Camera2Manager {
     int aeCompensation = 0;
     float focalLength = 0;
     long frameDuration = 0;
+    long duration = 0;
 
     private int imageCounter = 0;
 
@@ -166,8 +169,7 @@ public class Camera2Manager {
                     ActivityCompat.requestPermissions(activity, new String[]{Manifest.permission.CAMERA}, 1);
                     return;
                 }
-                // Configura ImageReader prima di aprire la fotocamera
-                setupImageReader();
+
                 cameraManager.openCamera(currentCameraId, stateCallback, backgroundHandler);
             } catch (Exception e) {
                 Toast.makeText(activity, "Error opening camera: " + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -322,32 +324,30 @@ public class Camera2Manager {
             switch (cameraConf) {
                 case EXPOSURE_TIME_RANGE:
                     exposureTime = convertToNanoseconds(value);
-                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
                     break;
 
                 case SENSITIVITY_RANGE:
                     sensitivity = Integer.parseInt(value);
-                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity);
                     break;
 
                 case LENS_MINIMUM_FOCUS_DISTANCE:
                     focusDistance = Float.parseFloat(value);
-                    builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
                     break;
 
                 case AE_COMPENSATION_RANGE:
                     aeCompensation = Integer.parseInt(value);
-                    builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
                     break;
 
                 case LENS_AVAILABLE_FOCAL_LENGTHS:
                     focalLength = Float.parseFloat(value);
-                    builder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
                     break;
 
                 case SENSOR_MAX_FRAME_DURATION:
                     frameDuration = Long.parseLong(value);
-                    builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
+                    break;
+
+                case DURATION:
+                    duration = convertToTimeLong(value);
                     break;
 
                 default:
@@ -356,6 +356,12 @@ public class Camera2Manager {
                     return;
             }
 
+            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
+            builder.set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity);
+            builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
+            builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
+            builder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
+            builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
             // Applica la nuova configurazione alla sessione di cattura
             captureSession.setRepeatingRequest(builder.build(), null, backgroundHandler);
 
@@ -368,10 +374,10 @@ public class Camera2Manager {
     private void startPreview() {
         try {
             Surface textureSurface = new Surface(textureView.getSurfaceTexture());
-            Surface imageReaderSurface = imageReader.getSurface();
+            setupImageReader();
 
             // Crea la sessione di cattura con entrambe le superfici
-            cameraDevice.createCaptureSession(Arrays.asList(textureSurface, imageReaderSurface), new CameraCaptureSession.StateCallback() {
+            cameraDevice.createCaptureSession(Arrays.asList(textureSurface, imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     captureSession = session;
@@ -388,7 +394,7 @@ public class Camera2Manager {
 
                         parametersReady.postValue(currentSettings);
                     } catch (CameraAccessException e) {
-                       Log.e("Camera", "Error starting preview: ", e);
+                        Log.e("Camera", "Error starting preview: ", e);
                     }
                 }
 
@@ -402,55 +408,9 @@ public class Camera2Manager {
         }
     }
 
-    private void startCapture() {
-        if (cameraDevice == null || !isCapturing || captureSession == null) return;
-
-        // Crea un thread separato per gestire la cattura dell'immagine
-        captureExecutorService = Executors.newSingleThreadExecutor();
-        captureExecutorService.execute(() -> {
-            try {
-                // Crea una richiesta di cattura
-                CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
-                captureBuilder.addTarget(imageReader.getSurface());
-                captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
-
-                // Imposta l'orientamento dell'immagine
-                int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-                captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
-
-                // Crea una sessione di acquisizione nel thread di background
-                cameraDevice.createCaptureSession(Collections.singletonList(imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
-                    @Override
-                    public void onConfigured(@NonNull CameraCaptureSession session) {
-                        captureSession = session;
-                        try {
-                            // Avvia la cattura dell'immagine
-                            captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
-                                @Override
-                                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-                                    // Aggiorna il tempo del video
-                                    handler.post(updateTimeRunnable);
-                                }
-                            }, backgroundHandler);
-                        } catch (CameraAccessException e) {
-                            Log.e("Camera", "Error starting capture: ", e);
-                        }
-                    }
-
-                    @Override
-                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                        Log.e("Camera", "Camera capture session configuration failed");
-                    }
-                }, backgroundHandler);
-            } catch (CameraAccessException e) {
-                Log.e("Camera", "Error during capture setup: ", e);
-            }
-        });
-    }
-
     public void startCaptureCycle() {
         isCapturing = true;
-        setupImageReader();
+
         // Ottieni la directory temporanea
         File tempDirectory = activity.getExternalFilesDir(null);
 
@@ -458,9 +418,37 @@ public class Camera2Manager {
         if (tempDirectory != null) {
             clearTemporaryFolder(tempDirectory);
         }
+
+        try {
+            CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            captureBuilder.addTarget(imageReader.getSurface());
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+
+            // Imposta l'orientamento dell'immagine
+            int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+            captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
+            captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                @Override
+                public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                    handler.post(updateTimeRunnable);
+                }
+            }, backgroundHandler);
+        } catch (CameraAccessException e) {
+            Log.e("Camera", "Error during capture setup: ", e);
+        }
         activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         startCapture();
         Toast.makeText(activity, "Capture cycle started.", Toast.LENGTH_SHORT).show();
+    }
+
+    private void startCapture() {
+        isCapturing = true;
+
+        // Avvia un timer per fermare l'acquisizione dopo il tempo specificato
+        if (duration > 0) {
+            new Handler().postDelayed(() -> stopCaptureCycle(), duration);
+        }
     }
 
     public void stopCaptureCycle() {
@@ -471,7 +459,6 @@ public class Camera2Manager {
         }
         activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         handler.removeCallbacks(updateTimeRunnable);
-        captureExecutorService.shutdown();
         onCycleCompleted();
         Toast.makeText(activity, "Capture cycle stopped.", Toast.LENGTH_SHORT).show();
     }
@@ -832,6 +819,8 @@ public class Camera2Manager {
             //log.debug("Camera", "Max Frame Duration: " + maxFrameDuration + " ns");
         }
 
+        results.put(DURATION, DURATION_VALUES);
+
 
         return results;
     }
@@ -937,24 +926,23 @@ public class Camera2Manager {
     private void setupImageReader() {
         // Crea un ImageReader per acquisire immagini in formato JPEG
         imageReader = ImageReader.newInstance(textureView.getWidth(), textureView.getHeight(), ImageFormat.JPEG, 2);
-        imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-            @Override
-            public void onImageAvailable(ImageReader reader) {
-                // Gestisci l'immagine catturata
-                Image image = reader.acquireLatestImage();
-                if (image != null) {
-                    // Salva l'immagine o esegui altre operazioni
-                    saveImage(image);
-                    image.close();
-
-                    // Se l'acquisizione ciclica è attiva, avvia una nuova acquisizione
-                    if (isCapturing) {
-                        startCapture();
-                    }
-                }
-            }
-        }, backgroundHandler);
+        imageReader.setOnImageAvailableListener(imageListener, backgroundHandler);
     }
+
+    private final ImageReader.OnImageAvailableListener imageListener = reader -> {
+        // Gestisci l'immagine catturata
+        Image image = reader.acquireLatestImage();
+        if (image != null) {
+            // Salva l'immagine o esegui altre operazioni
+            saveImage(image);
+            image.close();
+
+            // Se l'acquisizione ciclica è attiva, avvia una nuova acquisizione
+            if (isCapturing) {
+                startCapture();
+            }
+        }
+    };
 
     private void saveImage(Image image) {
         // Implementa la logica per salvare l'immagine
@@ -1005,4 +993,25 @@ public class Camera2Manager {
             }
         }
     }
+
+    private long convertToTimeLong(String value) {
+        if (value == null || value.isEmpty()) {
+            throw new IllegalArgumentException("Il valore fornito non può essere null o vuoto.");
+        }
+
+        value = value.trim().toLowerCase();
+
+        if (value.endsWith("sec")) {
+            // Rimuove "sec" e converte in secondi
+            String secondsStr = value.replace("sec", "").trim();
+            return Long.parseLong(secondsStr);
+        } else if (value.endsWith("min")) {
+            // Rimuove "min" e converte in minuti (moltiplicati per 60)
+            String minutesStr = value.replace("min", "").trim();
+            return Long.parseLong(minutesStr) * 60;
+        } else {
+            throw new IllegalArgumentException("Formato non valido. Usare 'Xsec' o 'Xmin'.");
+        }
+    }
+
 }

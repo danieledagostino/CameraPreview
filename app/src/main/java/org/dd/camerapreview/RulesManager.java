@@ -44,6 +44,8 @@ public class RulesManager {
                 paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), Camera2Manager.EXPOSURE_TIME_RANGE, "Exposure", currentCameraConfigs.get(Camera2Manager.EXPOSURE_TIME_RANGE));
         setupIconAndDraggableRuler(R.id.intervalButton, R.id.ruler_interval, R.id.intervalMeterViewContainer, R.id.intervalLabel,
                 paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), Camera2Manager.SENSOR_MAX_FRAME_DURATION, "Interval", currentCameraConfigs.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION));
+        setupIconAndDraggableRuler(R.id.durationButton, R.id.ruler_duration, R.id.durationMeterViewContainer, R.id.durationLabel,
+                paramters.get(Camera2Manager.DURATION), Camera2Manager.DURATION, "Movie duration", currentCameraConfigs.get(Camera2Manager.DURATION));
     }
 
     private void setupIconAndDraggableRuler(int buttonId, int draggableMeterId, int meterViewContainerId, int labelId, List<String> values, int cameraConf, String label, String currentConfVal) {
@@ -98,6 +100,8 @@ public class RulesManager {
         } else if (buttonId == R.id.exposureButton) {
             return R.id.exposureMeterViewContainer;
         } else if (buttonId == R.id.intervalButton) {
+            return R.id.intervalMeterViewContainer;
+        } else if (buttonId == R.id.durationButton) {
             return R.id.intervalMeterViewContainer;
         } else {
             return -1;

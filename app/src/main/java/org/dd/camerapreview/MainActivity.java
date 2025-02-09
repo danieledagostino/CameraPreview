@@ -111,4 +111,7 @@ public class MainActivity extends AppCompatActivity {
 
         camera2Manager = Camera2Manager.getInstance(this);
     }
+
+
+
 }
