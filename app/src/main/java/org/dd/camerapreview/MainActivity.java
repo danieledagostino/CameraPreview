@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
             if (!isCapturing) {
                 isCapturing = true;
                 camera2Manager.startCaptureCycle();
-                captureButton.setImageResource(R.drawable.camera_off);
+                captureButton.setImageResource(R.drawable.camera_on);
                 rulesManager.hideAllRulers();
                 timeTextView.setVisibility(View.VISIBLE);
                 Toast.makeText(MainActivity.this, "Started capturing images.", Toast.LENGTH_SHORT).show();
@@ -79,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 isCapturing = false;
                 camera2Manager.stopCaptureCycle();
-                captureButton.setImageResource(R.drawable.camera_on);
+                captureButton.setImageResource(R.drawable.camera_off);
                 Toast.makeText(MainActivity.this, "Stopped capturing. Creating video.", Toast.LENGTH_SHORT).show();
 
                 timeTextView.setVisibility(View.GONE);

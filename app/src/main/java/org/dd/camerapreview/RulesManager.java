@@ -153,6 +153,10 @@ public class RulesManager {
                 meterViewContainerId = R.id.intervalMeterViewContainer;
                 draggableMeterId = R.id.ruler_interval;
                 labelId = R.id.intervalLabel;
+            } else if (buttonId == R.id.durationButton) {
+                meterViewContainerId = R.id.durationMeterViewContainer;
+                draggableMeterId = R.id.ruler_duration;
+                labelId = R.id.intervalLabel;
             } else {
                 continue; // Se non corrisponde, passa al prossimo elemento
             }

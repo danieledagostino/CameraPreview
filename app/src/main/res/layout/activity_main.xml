@@ -95,10 +95,9 @@
                 android:layout_height="wrap_content"
                 android:layout_centerHorizontal="true"
                 android:layout_gravity="center_horizontal|bottom"
-                android:layout_marginBottom="32dp"
+                android:layout_marginBottom="64dp"
                 android:background="@null"
-                android:src="@drawable/camera_off"
-                app:tint="@color/white" />
+                android:src="@drawable/camera_off" />
 
             <include layout="@layout/rules_buttons" />
         </LinearLayout>
