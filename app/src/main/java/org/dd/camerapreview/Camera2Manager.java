@@ -12,6 +12,7 @@ import android.graphics.PointF;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.*;
+import android.hardware.camera2.params.InputConfiguration;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
@@ -49,15 +50,17 @@ import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import android.media.MediaScannerConnection;
 import android.content.ContentResolver;
@@ -90,8 +93,17 @@ public class Camera2Manager {
     public final static List<Integer> AE_COMPENSATION_RANGE_VALUES = Arrays.asList(-6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6);
     public final static int LENS_AVAILABLE_FOCAL_LENGTHS = 5;
     public final static int SENSOR_MAX_FRAME_DURATION = 6;
+    /*
+        tandard: 24 o 30 immagini al secondo (FPS) sono comuni per ottenere un risultato fluido e cinematografico.
+        Più lento o artistico: Puoi scendere a 15 FPS se cerchi un effetto più "scattoso" o sperimentale.
+
+        Scene veloci (nuvole in movimento, traffico): 1-3 secondi tra uno scatto e l'altro.
+        Scene lente (alba, tramonto, crescita di piante): 10-60 secondi tra uno scatto e l'altro.
+        Eventi estremamente lenti (costruzioni, crescita di alberi): ore o giorni tra uno scatto e l'altro.
+    */
+    public final static List<String> SENSOR_MAX_FRAME_DURATION_VALUES = Arrays.asList("Auto", "15fps", "24fps", "60fps", "90fps", "120fps", "150fps");
     public final static int DURATION = 7;
-    public final static List<String> DURATION_VALUES = Arrays.asList("10sec", "30sec", "1min", "3min", "5min", "10min");
+    public final static List<String> DURATION_VALUES = Arrays.asList("Auto", "10sec", "30sec", "1min", "3min", "5min", "10min");
 
     private List<String> capturedImagePaths = new ArrayList<>();
 
@@ -103,7 +115,7 @@ public class Camera2Manager {
     float focusDistance = 0;
     int aeCompensation = 0;
     float focalLength = 0;
-    long frameDuration = 0;
+    long frameDuration = 1;
     long duration = 0;
 
     private int imageCounter = 0;
@@ -112,24 +124,28 @@ public class Camera2Manager {
 
     private CaptureRequest previewRequest; // Aggiungi questa variabile a livello di classe
 
-    private long startTime;
     private Handler handler = new Handler(Looper.getMainLooper());
     private TextView timeTextView; // TextView per visualizzare il tempo del video
     private int fps = 30; // Fotogrammi per secondo del video
-    private ExecutorService captureExecutorService;
 
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
-            instance = new Camera2Manager(activity);
+            try {
+                instance = new Camera2Manager(activity);
+            } catch (CameraAccessException e) {
+                throw new RuntimeException(e);
+            }
         }
         return instance;
     }
 
-    public Camera2Manager(Activity activity) {
+    public Camera2Manager(Activity activity) throws CameraAccessException {
         this.activity = activity;
         textureView = activity.findViewById(R.id.camera_preview);
         timeTextView = activity.findViewById(R.id.timeTextView);
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+
+        currentCameraId = getBackCameraId();
 
         // Imposta il SurfaceTextureListener
         textureView.setSurfaceTextureListener(textureListener);
@@ -154,10 +170,69 @@ public class Camera2Manager {
         if (cameraConfig.containsKey(LENS_AVAILABLE_FOCAL_LENGTHS)) {
             focalLength = Float.parseFloat(cameraConfig.get(LENS_AVAILABLE_FOCAL_LENGTHS).get(0));
         }
-        if (cameraConfig.containsKey(SENSOR_MAX_FRAME_DURATION)) {
-            frameDuration = Long.parseLong(cameraConfig.get(SENSOR_MAX_FRAME_DURATION).get(0));
-        }
 
+        getCameraCapabilities();
+    }
+
+    /*
+    BACKWARD_COMPATIBLE	La fotocamera è compatibile con le API delle vecchie versioni (Camera1).
+    MANUAL_SENSOR	Supporta il controllo manuale su ISO, tempo di esposizione e bilanciamento del bianco.
+    RAW	Può acquisire immagini in formato RAW (ad esempio DNG).
+    BURST_CAPTURE	Supporta cattura in modalità burst ad alta velocità.
+    DEPTH_OUTPUT	Supporta la generazione di mappe di profondità (utilizzabile per applicazioni AR o Bokeh).
+    LOGICAL_MULTI_CAMERA	Fotocamera logica composta da più fotocamere fisiche (es. per cambiare tra grandangolo e tele).
+    ULTRA_HIGH_RESOLUTION_SENSOR	Supporta sensori ad altissima risoluzione (es. > 48 MP).
+    CONSTRAINED_HIGH_SPEED_VIDEO	Supporta registrazioni video ad alta velocità (es. 120fps o 240fps).
+     */
+    private void getCameraCapabilities() {
+        CameraManager cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
+
+        try {
+            for (String cameraId : cameraManager.getCameraIdList()) {
+                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+
+                // Ottieni le capacità disponibili
+                int[] capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+
+                if (capabilities != null) {
+                    for (int capability : capabilities) {
+                        switch (capability) {
+                            case CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_BACKWARD_COMPATIBLE:
+                                Log.d("Camera2", "Camera ID: " + cameraId + " supporta BACKWARD_COMPATIBLE");
+                                break;
+
+                            case CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR:
+                                Log.d("Camera2", "Camera ID: " + cameraId + " supporta MANUAL_SENSOR");
+                                break;
+
+                            case CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW:
+                                Log.d("Camera2", "Camera ID: " + cameraId + " supporta RAW");
+                                break;
+
+                            case CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA:
+                                Log.d("Camera2", "Camera ID: " + cameraId + " è LOGICAL_MULTI_CAMERA");
+                                Set<String> physicalCameraIds = null;
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                    physicalCameraIds = characteristics.getPhysicalCameraIds();
+                                }
+                                for (String id : physicalCameraIds) {
+                                    Log.d("Camera2", "ID fotocamera fisica: " + id);
+                                }
+                                break;
+
+                            case CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_ULTRA_HIGH_RESOLUTION_SENSOR:
+                                Log.d("Camera2", "Camera ID: " + cameraId + " supporta ULTRA HIGH RESOLUTION");
+                                break;
+
+                            default:
+                                Log.d("Camera2", "Camera ID: " + cameraId + " capacità sconosciuta: " + capability);
+                        }
+                    }
+                }
+            }
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
 
     public void openCamera() {
@@ -343,11 +418,15 @@ public class Camera2Manager {
                     break;
 
                 case SENSOR_MAX_FRAME_DURATION:
-                    frameDuration = Long.parseLong(value);
+                    if ("Auto".equals(value)) {
+                        frameDuration = convertFpsToMilliseconds("30fps");
+                    }else {
+                        frameDuration = convertFpsToMilliseconds(value);
+                    }
                     break;
 
                 case DURATION:
-                    duration = convertToTimeLong(value);
+                    duration = convertSecondsStringToInt(value);
                     break;
 
                 default:
@@ -361,7 +440,7 @@ public class Camera2Manager {
             builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
             builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
             builder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
-            builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
+            //builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
             // Applica la nuova configurazione alla sessione di cattura
             captureSession.setRepeatingRequest(builder.build(), null, backgroundHandler);
 
@@ -373,43 +452,99 @@ public class Camera2Manager {
 
     private void startPreview() {
         try {
+            // Ottieni le superfici necessarie
             Surface textureSurface = new Surface(textureView.getSurfaceTexture());
-            setupImageReader();
+            imageReader = setupImageReader();
+            Surface reprocessableSurface = imageReader.getSurface();
 
-            // Crea la sessione di cattura con entrambe le superfici
-            cameraDevice.createCaptureSession(Arrays.asList(textureSurface, imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
-                @Override
-                public void onConfigured(@NonNull CameraCaptureSession session) {
-                    captureSession = session;
-                    try {
-                        // Crea una richiesta di anteprima
-                        CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                        previewBuilder.addTarget(textureSurface);
+            // Verifica se la fotocamera supporta YUV reprocessing
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(currentCameraId);
+            int[] capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+            boolean supportsReprocessing = false;
 
-                        previewRequest = previewBuilder.build();
-                        setCurrentCameraSettings(previewRequest);
-
-                        // Imposta la richiesta di preview come ripetitiva
-                        captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
-
-                        parametersReady.postValue(currentSettings);
-                    } catch (CameraAccessException e) {
-                        Log.e("Camera", "Error starting preview: ", e);
+            if (capabilities != null) {
+                for (int capability : capabilities) {
+                    if (capability == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING) {
+                        supportsReprocessing = true;
+                        break;
                     }
                 }
+            }
 
-                @Override
-                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                    Toast.makeText(activity, "Preview configuration failed.", Toast.LENGTH_SHORT).show();
+            if (!supportsReprocessing) {
+                Log.e("Camera", "The camera does not support YUV reprocessing.");
+                return;
+            }
+
+            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+            InputConfiguration inputConfig = null;
+            if (map != null) {
+                int[] outputFormats = map.getOutputFormats();
+                for (int format : outputFormats) {
+                    Log.d("Camera", "Output format supported: " + format);
                 }
-            }, backgroundHandler);
+
+                // Verifica i formati di input
+                Size[] inputSizes = map.getInputSizes(ImageFormat.YUV_420_888); // Prova con YUV
+                if (inputSizes != null) {
+                    for (Size size : inputSizes) {
+                        Log.d("Camera", "Supported input size for YUV: " + size.getWidth() + "x" + size.getHeight());
+                    }
+                } else {
+                    Log.e("Camera", "No supported input sizes for YUV_420_888.");
+                }
+
+                // Crea la sessione di cattura riutilizzabile
+                Size selectedSize = inputSizes[0]; // Dimensioni supportate
+                inputConfig = new InputConfiguration(
+                        selectedSize.getWidth(),
+                        selectedSize.getHeight(),
+                        ImageFormat.YUV_420_888
+                );
+            }
+
+            cameraDevice.createReprocessableCaptureSession(
+                    inputConfig,
+                    Arrays.asList(textureSurface, reprocessableSurface),
+                    new CameraCaptureSession.StateCallback() {
+                        @Override
+                        public void onConfigured(@NonNull CameraCaptureSession session) {
+                            captureSession = session;
+
+                            try {
+                                // Configura la richiesta di anteprima
+                                CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                                previewBuilder.addTarget(textureSurface);
+
+                                previewRequest = previewBuilder.build();
+                                captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
+                                setCurrentCameraSettings(previewRequest);
+                                Log.d("Camera", "Reprocessable preview started successfully.");
+                                parametersReady.postValue(currentSettings);
+                            } catch (CameraAccessException e) {
+                                Log.e("Camera", "Error starting reprocessable preview: ", e);
+                            }
+                        }
+
+                        @Override
+                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                            Toast.makeText(activity, "Reprocessable preview configuration failed.", Toast.LENGTH_SHORT).show();
+                        }
+                    },
+                    backgroundHandler
+            );
         } catch (CameraAccessException e) {
-            e.printStackTrace();
+            Log.e("Camera", "Error initializing reprocessable preview: ", e);
         }
     }
 
+    private ScheduledExecutorService captureScheduler;
+
+    private ExecutorService captureExecutorService;
     public void startCaptureCycle() {
         isCapturing = true;
+        captureScheduler = Executors.newSingleThreadScheduledExecutor();
 
         // Ottieni la directory temporanea
         File tempDirectory = activity.getExternalFilesDir(null);
@@ -419,35 +554,47 @@ public class Camera2Manager {
             clearTemporaryFolder(tempDirectory);
         }
 
+
+        captureScheduler.scheduleWithFixedDelay(() -> {
+            captureImage();
+        }, 0, frameDuration, TimeUnit.MILLISECONDS);
+
+        activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        Toast.makeText(activity, "Capture cycle started.", Toast.LENGTH_SHORT).show();
+
+        // Avvia un timer per fermare l'acquisizione dopo il tempo specificato
+        if (duration > 0) {
+            new Handler().postDelayed(() -> stopCaptureCycle(), duration);
+        }
+    }
+
+    private void captureImage() {
+        if (captureSession == null || !isCapturing) {
+            Log.d("Camera", "Capture session is not ready or isCapturing is false.");
+            return;
+        }
+
         try {
+            // Configura la richiesta per l'acquisizione dell'immagine
             CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(imageReader.getSurface());
-            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
             captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
 
             // Imposta l'orientamento dell'immagine
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
             captureBuilder.set(CaptureRequest.JPEG_ORIENTATION, getOrientation(rotation));
+
+            // Avvia l'acquisizione
             captureSession.capture(captureBuilder.build(), new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                    Log.d("Camera", "Image captured successfully in reprocessable session.");
                     handler.post(updateTimeRunnable);
                 }
             }, backgroundHandler);
+
         } catch (CameraAccessException e) {
-            Log.e("Camera", "Error during capture setup: ", e);
-        }
-        activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        startCapture();
-        Toast.makeText(activity, "Capture cycle started.", Toast.LENGTH_SHORT).show();
-    }
-
-    private void startCapture() {
-        isCapturing = true;
-
-        // Avvia un timer per fermare l'acquisizione dopo il tempo specificato
-        if (duration > 0) {
-            new Handler().postDelayed(() -> stopCaptureCycle(), duration);
+            Log.e("Camera", "Error capturing image in reprocessable session: ", e);
         }
     }
 
@@ -457,6 +604,7 @@ public class Camera2Manager {
             imageReader.close();
             imageReader = null;
         }
+        captureScheduler.shutdownNow();
         activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         handler.removeCallbacks(updateTimeRunnable);
         onCycleCompleted();
@@ -803,6 +951,11 @@ public class Camera2Manager {
             //log.debug("Camera", "AE Compensation Range: " + minAeComp + " - " + maxAeComp + ", Step: " + aeStep);
         }
 
+        /*
+        5,59 mm potrebbe essere l'obiettivo principale.
+        1,8 mm potrebbe essere l'obiettivo ultra-grandangolare.
+        10 mm potrebbe essere il teleobiettivo.
+         */
         float[] focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
         if (focalLengths != null) {
             List<String> focalLengthsAsStrings = new ArrayList<>();
@@ -813,11 +966,11 @@ public class Camera2Manager {
             results.put(LENS_AVAILABLE_FOCAL_LENGTHS, focalLengthsAsStrings);
         }
 
-        Long maxFrameDuration = characteristics.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
-        if (maxFrameDuration != null) {
-            results.put(SENSOR_MAX_FRAME_DURATION, Arrays.asList(String.valueOf(maxFrameDuration)));
+        //Long maxFrameDuration = characteristics.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+        //if (maxFrameDuration != null) {
+            results.put(SENSOR_MAX_FRAME_DURATION, SENSOR_MAX_FRAME_DURATION_VALUES);
             //log.debug("Camera", "Max Frame Duration: " + maxFrameDuration + " ns");
-        }
+        //}
 
         results.put(DURATION, DURATION_VALUES);
 
@@ -923,10 +1076,12 @@ public class Camera2Manager {
     }
 
 
-    private void setupImageReader() {
+    private ImageReader setupImageReader() {
         // Crea un ImageReader per acquisire immagini in formato JPEG
         imageReader = ImageReader.newInstance(textureView.getWidth(), textureView.getHeight(), ImageFormat.JPEG, 2);
         imageReader.setOnImageAvailableListener(imageListener, backgroundHandler);
+
+        return imageReader;
     }
 
     private final ImageReader.OnImageAvailableListener imageListener = reader -> {
@@ -936,11 +1091,6 @@ public class Camera2Manager {
             // Salva l'immagine o esegui altre operazioni
             saveImage(image);
             image.close();
-
-            // Se l'acquisizione ciclica è attiva, avvia una nuova acquisizione
-            if (isCapturing) {
-                startCapture();
-            }
         }
     };
 
@@ -1014,4 +1164,30 @@ public class Camera2Manager {
         }
     }
 
+    private int convertSecondsStringToInt(String timeString) {
+        if ("Auto".equals(timeString)){
+            return 0;
+        }else if (timeString != null && timeString.endsWith("sec")) {
+            try {
+                // Rimuovi il suffisso "sec" e converte la parte numerica in intero
+                String numericPart = timeString.replace("sec", "");
+                return Integer.parseInt(numericPart);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Formato non valido: " + timeString);
+            }
+        } else {
+            throw new IllegalArgumentException("La stringa deve terminare con 'sec': " + timeString);
+        }
+    }
+
+    private long convertFpsToMilliseconds(String fpsValue) {
+        try {
+            // Extract numerical part of the fps value
+            int fps = Integer.parseInt(fpsValue.replace("fps", ""));
+            // Calculate and return milliseconds per frame as long
+            return 1000L / fps;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid FPS value: " + fpsValue);
+        }
+    }
 }

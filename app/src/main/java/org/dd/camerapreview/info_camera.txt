@@ -1,0 +1,108 @@
+1. Messa a fuoco (Focus)
+CaptureRequest.CONTROL_AF_MODE
+Imposta la modalità di messa a fuoco automatica:
+
+CameraMetadata.CONTROL_AF_MODE_AUTO: Messa a fuoco automatica standard.
+CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE: Messa a fuoco continua per foto.
+CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_VIDEO: Messa a fuoco continua per video.
+CameraMetadata.CONTROL_AF_MODE_OFF: Disattiva la messa a fuoco automatica (manuale).
+CaptureRequest.LENS_FOCUS_DISTANCE
+Specifica manualmente la distanza di messa a fuoco (se CONTROL_AF_MODE è impostato su OFF).
+
+2. Esposizione
+CaptureRequest.CONTROL_AE_MODE
+Imposta la modalità di esposizione automatica:
+
+CameraMetadata.CONTROL_AE_MODE_ON: Esposizione automatica.
+CameraMetadata.CONTROL_AE_MODE_OFF: Esposizione manuale.
+CaptureRequest.SENSOR_EXPOSURE_TIME
+Tempo di esposizione manuale (in nanosecondi, funziona solo se CONTROL_AE_MODE è disattivato).
+
+CaptureRequest.SENSOR_SENSITIVITY
+Imposta manualmente l'ISO (funziona solo con esposizione manuale).
+
+CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE
+Specifica un intervallo di frame rate desiderato.
+
+3. Bilanciamento del bianco (White Balance)
+CaptureRequest.CONTROL_AWB_MODE
+Imposta la modalità di bilanciamento del bianco:
+CameraMetadata.CONTROL_AWB_MODE_AUTO: Bilanciamento automatico.
+CameraMetadata.CONTROL_AWB_MODE_INCANDESCENT: Luce calda (lampadina).
+CameraMetadata.CONTROL_AWB_MODE_FLUORESCENT: Luce al neon.
+CameraMetadata.CONTROL_AWB_MODE_DAYLIGHT: Luce diurna.
+CameraMetadata.CONTROL_AWB_MODE_CLOUDY_DAYLIGHT: Giorno nuvoloso.
+CameraMetadata.CONTROL_AWB_MODE_OFF: Bilanciamento manuale.
+4. Modalità di controllo
+CaptureRequest.CONTROL_MODE
+Modalità di controllo generale:
+
+CameraMetadata.CONTROL_MODE_AUTO: Controllo automatico.
+CameraMetadata.CONTROL_MODE_OFF: Controllo completamente manuale.
+CameraMetadata.CONTROL_MODE_USE_SCENE_MODE: Usa una scena predefinita.
+CaptureRequest.CONTROL_SCENE_MODE
+Modalità di scena, da utilizzare con CONTROL_MODE_USE_SCENE_MODE:
+
+CameraMetadata.CONTROL_SCENE_MODE_PORTRAIT: Ritratto.
+CameraMetadata.CONTROL_SCENE_MODE_SPORTS: Sport.
+CameraMetadata.CONTROL_SCENE_MODE_NIGHT: Notturno.
+Altri valori specifici per il dispositivo.
+5. Flash
+CaptureRequest.FLASH_MODE
+Controlla il comportamento del flash:
+
+CameraMetadata.FLASH_MODE_OFF: Flash disattivato.
+CameraMetadata.FLASH_MODE_SINGLE: Scatta una foto con il flash acceso una volta.
+CameraMetadata.FLASH_MODE_TORCH: Flash acceso continuamente come torcia.
+CaptureRequest.CONTROL_AE_MODE
+Modalità di esposizione automatica con controllo del flash:
+
+CameraMetadata.CONTROL_AE_MODE_ON_AUTO_FLASH: Flash automatico.
+CameraMetadata.CONTROL_AE_MODE_ON_ALWAYS_FLASH: Flash sempre attivo.
+6. Stabilizzazione
+CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE
+Stabilizzazione elettronica dell'immagine (EIS):
+
+CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_ON: Stabilizzazione attiva.
+CameraMetadata.CONTROL_VIDEO_STABILIZATION_MODE_OFF: Stabilizzazione disattivata.
+CaptureRequest.LENS_OPTICAL_STABILIZATION_MODE
+Stabilizzazione ottica dell'immagine (OIS):
+
+CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_ON: Stabilizzazione attiva.
+CameraMetadata.LENS_OPTICAL_STABILIZATION_MODE_OFF: Stabilizzazione disattivata.
+7. Effetti
+CaptureRequest.CONTROL_EFFECT_MODE
+Imposta effetti sull'immagine:
+CameraMetadata.CONTROL_EFFECT_MODE_MONO: Bianco e nero.
+CameraMetadata.CONTROL_EFFECT_MODE_SEPIA: Seppia.
+CameraMetadata.CONTROL_EFFECT_MODE_NEGATIVE: Colori invertiti.
+Altri valori disponibili a seconda del dispositivo.
+8. Risoluzione e qualità
+CaptureRequest.JPEG_QUALITY
+Imposta la qualità JPEG (valore da 1 a 100).
+
+CaptureRequest.JPEG_ORIENTATION
+Specifica l'orientamento dell'immagine JPEG (0, 90, 180, 270 gradi).
+
+9. Autofocus touch (se supportato)
+CaptureRequest.CONTROL_AF_REGIONS
+Imposta le regioni di interesse per la messa a fuoco automatica.
+
+CaptureRequest.CONTROL_AE_REGIONS
+Imposta le regioni di interesse per l'esposizione automatica.
+
+10. Altri controlli
+CaptureRequest.NOISE_REDUCTION_MODE
+Modalità di riduzione del rumore.
+
+CaptureRequest.EDGE_MODE
+Imposta la modalità di miglioramento dei bordi.
+
+CaptureRequest.SHADING_MODE
+Correzione della vignettatura (illuminazione ai bordi).
+
+CaptureRequest.COLOR_CORRECTION_MODE
+Correzione dei colori automatica o manuale.
+
+Nota
+Non tutti i valori e i parametri sono supportati su ogni dispositivo. È buona pratica verificare il supporto del dispositivo usando i metodi di CameraCharacteristics prima di impostare determinati parametri.
