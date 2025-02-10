@@ -1,5 +1,6 @@
 package org.dd.camerapreview;
 
+import android.content.res.Configuration;
 import android.hardware.camera2.CameraAccessException;
 import android.os.Bundle;
 import android.view.View;
@@ -107,6 +108,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        camera2Manager.closeCamera();
+        camera2Manager.openCamera();
+    }
 
 }

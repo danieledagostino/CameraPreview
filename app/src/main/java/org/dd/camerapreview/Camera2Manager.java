@@ -4,6 +4,7 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
@@ -128,8 +129,10 @@ public class Camera2Manager {
     private TextView timeTextView; // TextView per visualizzare il tempo del video
     private int fps = 30; // Fotogrammi per secondo del video
 
-    Surface textureSurface;
-    Surface reprocessableSurface;
+    private Surface textureSurface;
+    private Surface reprocessableSurface;
+
+    Size selectedSize = null;
 
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
@@ -290,6 +293,8 @@ public class Camera2Manager {
         closeCamera();
         openCamera();
     }
+
+
 
     public void closeCamera() {
         if (captureSession != null) {
@@ -501,7 +506,7 @@ public class Camera2Manager {
                 }
 
                 // Crea la sessione di cattura riutilizzabile
-                Size selectedSize = inputSizes[0]; // Dimensioni supportate
+                selectedSize = inputSizes[0]; // Dimensioni supportate
                 inputConfig = new InputConfiguration(
                         selectedSize.getWidth(),
                         selectedSize.getHeight(),
@@ -522,8 +527,16 @@ public class Camera2Manager {
                                 CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
                                 previewBuilder.addTarget(textureSurface);
 
+                                // Imposta la rotazione prima di creare la richiesta finale
+                                int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+                                configureTransform(rotation, selectedSize);
+                                setPreviewRotation(previewBuilder, rotation);
+
+                                // Crea la richiesta di cattura e avvia l'anteprima
                                 previewRequest = previewBuilder.build();
                                 captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
+
+                                // Salva le impostazioni attuali
                                 setCurrentCameraSettings(previewRequest);
                                 Log.d("Camera", "Reprocessable preview started successfully.");
                                 parametersReady.postValue(currentSettings);
@@ -543,6 +556,7 @@ public class Camera2Manager {
             Log.e("Camera", "Error initializing reprocessable preview: ", e);
         }
     }
+
 
     private ScheduledExecutorService captureScheduler;
 
@@ -630,6 +644,52 @@ public class Camera2Manager {
                 return 0;
         }
     }
+
+    private void setPreviewRotation(CaptureRequest.Builder previewRequestBuilder, int rotation) {
+        // Imposta la rotazione della fotocamera in base alla rotazione del dispositivo
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            switch (rotation) {
+                case Surface.ROTATION_0:
+                    previewRequestBuilder.set(CaptureRequest.SCALER_ROTATE_AND_CROP, 0); // Portrait
+                    break;
+                case Surface.ROTATION_90:
+                    previewRequestBuilder.set(CaptureRequest.SCALER_ROTATE_AND_CROP, 90); // Landscape
+                    break;
+                case Surface.ROTATION_180:
+                    previewRequestBuilder.set(CaptureRequest.SCALER_ROTATE_AND_CROP, 180); // Upside down portrait
+                    break;
+                case Surface.ROTATION_270:
+                    previewRequestBuilder.set(CaptureRequest.SCALER_ROTATE_AND_CROP, 270); // Upside down landscape
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private void configureTransform(int rotation, Size previewSize) {
+        Matrix matrix = new Matrix();
+        int viewWidth = textureView.getWidth();
+        int viewHeight = textureView.getHeight();
+
+        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
+        RectF bufferRect = new RectF(0, 0, previewSize.getHeight(), previewSize.getWidth());
+        float centerX = viewRect.centerX();
+        float centerY = viewRect.centerY();
+
+        if (rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+            bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY());
+            matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL);
+            float scale = Math.max(
+                    (float) viewHeight / previewSize.getHeight(),
+                    (float) viewWidth / previewSize.getWidth()
+            );
+            matrix.postScale(scale, scale, centerX, centerY);
+            matrix.postRotate(90 * (rotation - 2), centerX, centerY);
+        }
+        textureView.setTransform(matrix);
+    }
+
 
     private void onCycleCompleted() {
         System.out.println("Ciclo completato.");
@@ -1216,4 +1276,5 @@ public class Camera2Manager {
 
         instance = null;
     }
+
 }
