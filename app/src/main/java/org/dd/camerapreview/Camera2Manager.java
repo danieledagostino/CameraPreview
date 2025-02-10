@@ -85,7 +85,15 @@ public class Camera2Manager {
     private boolean isCapturing = false;
 
     public final static int EXPOSURE_TIME_RANGE = 1; //Acquisition time
-    public final static List<Long> EXPOSURE_VALUES_NS = Arrays.asList(25_000_000L, 100_000_000L, 250_000_000L, 1_000_000_000L, 10_000_000_000L, 25_000_000_000L);
+    //public final static List<Long> EXPOSURE_VALUES_NS = Arrays.asList(25_000_000L, 100_000_000L, 250_000_000L, 1_000_000_000L, 10_000_000_000L, 25_000_000_000L);
+    public final static List<String> EXPOSURE_VALUES_SECONDS = Arrays.asList(
+            "1/40",   // 25_000_000 ns = 0.025 s
+            "1/10",   // 100_000_000 ns = 0.1 s
+            "1/4",    // 250_000_000 ns = 0.25 s
+            "1",      // 1_000_000_000 ns = 1 s
+            "10",     // 10_000_000_000 ns = 10 s
+            "25"      // 25_000_000_000 ns = 25 s
+    );
     public final static int SENSITIVITY_RANGE = 2; //ISO
     public final static List<Integer> SENSITIVITY_VALUES = Arrays.asList(100, 200, 400, 800, 1600, 3200, 6400);
     public final static int LENS_MINIMUM_FOCUS_DISTANCE = 3;
@@ -430,7 +438,7 @@ public class Camera2Manager {
                 case SENSOR_MAX_FRAME_DURATION:
                     if ("Auto".equals(value)) {
                         frameDuration = convertFpsToMilliseconds("30fps");
-                    }else {
+                    } else {
                         frameDuration = convertFpsToMilliseconds(value);
                     }
                     break;
@@ -445,12 +453,25 @@ public class Camera2Manager {
                     return;
             }
 
+            // Controlli aggiunti
+            if (!"Auto".equals(value) && (frameDuration < exposureTime)) {
+                Toast.makeText(activity, "Frame duration cannot be less than exposure time", Toast.LENGTH_SHORT).show();
+                frameDuration = exposureTime; // Correzione automatica
+            }
+
+            if (duration < Math.max(frameDuration, exposureTime)) {
+                Toast.makeText(activity, "Duration cannot be less than frame duration or exposure time", Toast.LENGTH_SHORT).show();
+                duration = (int) Math.max(frameDuration, exposureTime); // Correzione automatica
+            }
+
+            // Imposta i parametri aggiornati
             builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
             builder.set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity);
             builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
             builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
             builder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
-            //builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
+            // builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
+
             // Applica la nuova configurazione alla sessione di cattura
             captureSession.setRepeatingRequest(builder.build(), null, backgroundHandler);
 
@@ -459,6 +480,7 @@ public class Camera2Manager {
             Toast.makeText(activity, "Error updating camera preview: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
+
 
     private void startPreview() {
         try {
@@ -597,7 +619,14 @@ public class Camera2Manager {
             // Configura la richiesta per l'acquisizione dell'immagine
             CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(imageReader.getSurface());
-            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO);
+            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF);
+            // Imposta i parametri aggiornati
+            captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
+            captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity);
+            captureBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
+            captureBuilder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
+            captureBuilder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
+            // builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
 
             // Imposta l'orientamento dell'immagine
             int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
@@ -627,6 +656,7 @@ public class Camera2Manager {
         activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         handler.removeCallbacks(updateTimeRunnable);
         onCycleCompleted();
+
         Toast.makeText(activity, "Capture cycle stopped.", Toast.LENGTH_SHORT).show();
     }
 
@@ -746,6 +776,8 @@ public class Camera2Manager {
                             Log.i("MediaScanner", "File aggiunto alla galleria: " + path);
                         });
                     }
+
+                    imageCounter = 0;
                 } else {
                     Log.e("Camera", "Errore nella generazione del video. Return code: " + session.getReturnCode());
                     Log.e("Camera", "Errore nella generazione del video: " + session.getFailStackTrace());
@@ -979,15 +1011,15 @@ public class Camera2Manager {
 
         Range<Long> exposureRange = characteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
         if (exposureRange != null) {
-            long minExposureTime = exposureRange.getLower();
-            long maxExposureTime = exposureRange.getUpper();
+            double minExposureTime = convertExposureTimeToMilliseconds(exposureRange.getLower());
+            double maxExposureTime = convertExposureTimeToMilliseconds(exposureRange.getUpper());
             int denominator = 1000; // Base (es. 1 secondo = 1000 ms)
 
             List<String> list = new ArrayList<>();
 
-            for (Long val : EXPOSURE_VALUES_NS) {
-                if (val.compareTo(minExposureTime) >= 1 && val.compareTo(maxExposureTime) <= 1) {
-                    list.add(convertToFraction(val));
+            for (String val : EXPOSURE_VALUES_SECONDS) {
+                if (convertToNanoseconds(val) >= minExposureTime && convertToNanoseconds(val) >= maxExposureTime) {
+                    list.add(val);
                 }
             }
             results.put(EXPOSURE_TIME_RANGE, list);
@@ -1062,18 +1094,6 @@ public class Camera2Manager {
             return a;
         }
         return findGCD(b, a % b);
-    }
-
-    private long convertToNanoseconds(String fraction) {
-        String[] parts = fraction.split("/");
-        int denominator = Integer.parseInt(parts[0]);
-        int numerator = Integer.parseInt(parts[1]);
-
-        // Calcola il risultato in millisecondi
-        double milliseconds = (double) numerator / denominator;
-
-        // Converte in nanosecondi
-        return (long) (milliseconds * 1_000_000);
     }
 
     private String calculateLensType(double minFocusDistance) {
@@ -1275,6 +1295,41 @@ public class Camera2Manager {
         }
 
         instance = null;
+    }
+
+    /**
+     * Converte una lista di valori di esposizione (in secondi o frazioni di secondo) in nanosecondi.
+     *
+     * @param value Lista di valori in secondi o frazioni di secondo.
+     * @return Lista di valori convertiti in nanosecondi.
+     */
+    public static Long convertToNanoseconds(String value) {
+        List<Long> exposureValuesNs = new ArrayList<>();
+
+        long nanoseconds;
+        if (value.contains("/")) {
+            // Caso frazione: separa numeratore e denominatore
+            String[] fraction = value.split("/");
+            double numerator = Double.parseDouble(fraction[0]);
+            double denominator = Double.parseDouble(fraction[1]);
+            nanoseconds = (long) ((numerator / denominator) * 1_000_000_000);
+        } else {
+            // Caso valore intero o decimale
+            double seconds = Double.parseDouble(value);
+            nanoseconds = (long) (seconds * 1_000_000_000);
+        }
+
+        return nanoseconds;
+    }
+
+    /**
+     * Converte un valore di esposizione in nanosecondi in millisecondi.
+     *
+     * @param nanoseconds Valore di esposizione in nanosecondi.
+     * @return Valore convertito in millisecondi.
+     */
+    public static double convertExposureTimeToMilliseconds(long nanoseconds) {
+        return nanoseconds / 1_000_000.0; // Divide per 1.000.000 per ottenere millisecondi
     }
 
 }

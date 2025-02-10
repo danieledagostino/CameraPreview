@@ -40,10 +40,8 @@ public class RulesManager {
                 paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), Camera2Manager.EXPOSURE_TIME_RANGE, "Shutter", currentCameraConfigs.get(Camera2Manager.EXPOSURE_TIME_RANGE));
         setupIconAndDraggableRuler(R.id.focusButton, R.id.ruler_focus, R.id.focusMeterViewContainer, R.id.focusLabel,
                 paramters.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS), Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS, "Focus", currentCameraConfigs.get(Camera2Manager.LENS_AVAILABLE_FOCAL_LENGTHS));
-        setupIconAndDraggableRuler(R.id.exposureButton, R.id.ruler_exposure, R.id.exposureMeterViewContainer, R.id.exposureLabel,
-                paramters.get(Camera2Manager.EXPOSURE_TIME_RANGE), Camera2Manager.EXPOSURE_TIME_RANGE, "Exposure", currentCameraConfigs.get(Camera2Manager.EXPOSURE_TIME_RANGE));
         setupIconAndDraggableRuler(R.id.intervalButton, R.id.ruler_interval, R.id.intervalMeterViewContainer, R.id.intervalLabel,
-                paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), Camera2Manager.SENSOR_MAX_FRAME_DURATION, "Interval", currentCameraConfigs.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION));
+                paramters.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION), Camera2Manager.SENSOR_MAX_FRAME_DURATION, "Frame Interval", currentCameraConfigs.get(Camera2Manager.SENSOR_MAX_FRAME_DURATION));
         setupIconAndDraggableRuler(R.id.durationButton, R.id.ruler_duration, R.id.durationMeterViewContainer, R.id.durationLabel,
                 paramters.get(Camera2Manager.DURATION), Camera2Manager.DURATION, "Movie duration", currentCameraConfigs.get(Camera2Manager.DURATION));
     }
@@ -97,8 +95,6 @@ public class RulesManager {
             return R.id.shutterMeterViewContainer;
         } else if (buttonId == R.id.focusButton) {
             return R.id.focusMeterViewContainer;
-        } else if (buttonId == R.id.exposureButton) {
-            return R.id.exposureMeterViewContainer;
         } else if (buttonId == R.id.intervalButton) {
             return R.id.intervalMeterViewContainer;
         } else if (buttonId == R.id.durationButton) {
@@ -145,10 +141,6 @@ public class RulesManager {
                 meterViewContainerId = R.id.focusMeterViewContainer;
                 draggableMeterId = R.id.ruler_focus;
                 labelId = R.id.focusLabel;
-            } else if (buttonId == R.id.exposureButton) {
-                meterViewContainerId = R.id.exposureMeterViewContainer;
-                draggableMeterId = R.id.ruler_exposure;
-                labelId = R.id.exposureLabel;
             } else if (buttonId == R.id.intervalButton) {
                 meterViewContainerId = R.id.intervalMeterViewContainer;
                 draggableMeterId = R.id.ruler_interval;
