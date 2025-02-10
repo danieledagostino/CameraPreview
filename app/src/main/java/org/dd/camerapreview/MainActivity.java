@@ -95,9 +95,6 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        if (camera2Manager != null) {
-            camera2Manager.closeCamera();
-        }
 
         camera2Manager = Camera2Manager.getInstance(this);
     }
@@ -106,10 +103,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         if (camera2Manager != null) {
-            camera2Manager.closeCamera();
+            camera2Manager.invalidateCamera();
         }
-
-        camera2Manager = Camera2Manager.getInstance(this);
     }
 
 

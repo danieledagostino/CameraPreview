@@ -128,6 +128,9 @@ public class Camera2Manager {
     private TextView timeTextView; // TextView per visualizzare il tempo del video
     private int fps = 30; // Fotogrammi per secondo del video
 
+    Surface textureSurface;
+    Surface reprocessableSurface;
+
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
             try {
@@ -172,6 +175,8 @@ public class Camera2Manager {
         }
 
         getCameraCapabilities();
+
+        openCamera();
     }
 
     /*
@@ -453,9 +458,9 @@ public class Camera2Manager {
     private void startPreview() {
         try {
             // Ottieni le superfici necessarie
-            Surface textureSurface = new Surface(textureView.getSurfaceTexture());
+            textureSurface = new Surface(textureView.getSurfaceTexture());
             imageReader = setupImageReader();
-            Surface reprocessableSurface = imageReader.getSurface();
+            reprocessableSurface = imageReader.getSurface();
 
             // Verifica se la fotocamera supporta YUV reprocessing
             CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(currentCameraId);
@@ -1189,5 +1194,26 @@ public class Camera2Manager {
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException("Invalid FPS value: " + fpsValue);
         }
+    }
+
+    public void invalidateCamera(){
+        if (captureSession != null) {
+            captureSession.close();
+            captureSession = null;
+        }
+
+        if (cameraDevice != null) {
+            cameraDevice.close();
+            cameraDevice = null;
+        }
+
+        if (textureSurface != null && textureSurface.isValid()) {
+            textureSurface.release();
+        }
+        if (reprocessableSurface != null && reprocessableSurface.isValid()) {
+            reprocessableSurface.release();
+        }
+
+        instance = null;
     }
 }
