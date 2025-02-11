@@ -1,8 +1,11 @@
 package org.dd.camerapreview;
 
+import android.content.Context;
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.hardware.camera2.CameraAccessException;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.TextView;
@@ -114,5 +117,4 @@ public class MainActivity extends AppCompatActivity {
         camera2Manager.closeCamera();
         camera2Manager.openCamera();
     }
-
 }

@@ -175,7 +175,11 @@ public class Camera2Manager {
         if (cameraConfig.containsKey(LENS_MINIMUM_FOCUS_DISTANCE)) {
             String minFocusDistanceStr = cameraConfig.get(LENS_MINIMUM_FOCUS_DISTANCE).get(0);
             if (minFocusDistanceStr != null && !minFocusDistanceStr.isEmpty()) {
-                focusDistance = Float.parseFloat(minFocusDistanceStr);
+                try {
+                    focusDistance = Float.parseFloat(minFocusDistanceStr);
+                } catch (NumberFormatException e) {
+                    Log.e("Camera2Manager", "Error parsing LENS_MINIMUM_FOCUS_DISTANCE:");
+                }
             }
         }
         if (cameraConfig.containsKey(AE_COMPENSATION_RANGE)) {
