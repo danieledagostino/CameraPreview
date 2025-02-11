@@ -170,7 +170,7 @@ public class Camera2Manager {
             exposureTime = convertToNanoseconds(cameraConfig.get(EXPOSURE_TIME_RANGE).get(0)); // Leggi il primo valore
         }
         if (cameraConfig.containsKey(SENSITIVITY_RANGE)) {
-            sensitivity = Integer.parseInt(cameraConfig.get(SENSITIVITY_RANGE).get(0));
+            sensitivity = Integer.parseInt(cameraConfig.get(SENSITIVITY_RANGE).get(cameraConfig.get(SENSITIVITY_RANGE).size() - 1));
         }
         if (cameraConfig.containsKey(LENS_MINIMUM_FOCUS_DISTANCE)) {
             String minFocusDistanceStr = cameraConfig.get(LENS_MINIMUM_FOCUS_DISTANCE).get(0);
@@ -619,7 +619,6 @@ public class Camera2Manager {
             // Configura la richiesta per l'acquisizione dell'immagine
             CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             captureBuilder.addTarget(imageReader.getSurface());
-            captureBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_OFF);
             // Imposta i parametri aggiornati
             captureBuilder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
             captureBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, sensitivity);
@@ -722,7 +721,7 @@ public class Camera2Manager {
 
 
     private void onCycleCompleted() {
-        System.out.println("Ciclo completato.");
+        Log.i("Camera", "Ciclo completato.");
 
         if (capturedImagePaths.isEmpty()) {
             Toast.makeText(activity, "Nessuna immagine catturata per generare il video.", Toast.LENGTH_SHORT).show();
@@ -1028,10 +1027,18 @@ public class Camera2Manager {
 
         Float minFocusDistance = characteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE);
         if (minFocusDistance != null) {
+            focusDistance = minFocusDistance;
             results.put(LENS_MINIMUM_FOCUS_DISTANCE, Arrays.asList(calculateLensType(minFocusDistance)));
             //log.debug("Camera", "Minimum Focus Distance: " + minFocusDistance + " (1/m)");
         }
 
+        /*
+        Il parametro CONTROL_AE_COMPENSATION_RANGE è utilizzato in contesti di fotografia digitale, in particolare nelle impostazioni delle fotocamere automatiche. Si riferisce alla gamma di compensazione dell'esposizione automatica (AE, Automatic Exposure). Questo parametro definisce il range entro cui la fotocamera può regolare l'esposizione per ottenere immagini correttamente illuminate, anche quando le condizioni di luce sono difficili o estreme.
+
+        In pratica, se la fotocamera rileva che l'immagine è troppo scura o troppo chiara, può utilizzare il controllo della compensazione dell'esposizione per "aumentare" o "diminuire" la luminosità dell'immagine. La compensazione dell'esposizione agisce agendo su parametri come l'apertura del diaframma, la velocità dell'otturatore o la sensibilità ISO.
+
+        Quindi, CONTROL_AE_COMPENSATION_RANGE stabilisce l'intervallo di valori che la fotocamera può utilizzare per regolare l'esposizione senza compromettere troppo la qualità dell'immagine.
+         */
         Range<Integer> aeCompRange = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
         Rational aeStep = characteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP);
         if (aeCompRange != null && aeStep != null) {
@@ -1044,6 +1051,7 @@ public class Camera2Manager {
                     list.add(String.valueOf(val));
                 }
             }
+            //aeCompensation
             results.put(AE_COMPENSATION_RANGE, list);
             //log.debug("Camera", "AE Compensation Range: " + minAeComp + " - " + maxAeComp + ", Step: " + aeStep);
         }
@@ -1176,6 +1184,11 @@ public class Camera2Manager {
             // Salva l'immagine o esegui altre operazioni
             saveImage(image);
             image.close();
+        }
+
+        if (isCapturing) {
+            Log.d("Camera", "Capturing image... " + imageCounter);
+            captureImage();
         }
     };
 
