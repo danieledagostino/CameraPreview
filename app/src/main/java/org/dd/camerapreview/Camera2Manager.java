@@ -488,97 +488,131 @@ public class Camera2Manager {
             textureSurface = new Surface(textureView.getSurfaceTexture());
             imageReader = setupImageReader();
             reprocessableSurface = imageReader.getSurface();
-
-            // Verifica se la fotocamera supporta YUV reprocessing
             CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(currentCameraId);
-            int[] capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
-            boolean supportsReprocessing = false;
 
-            if (capabilities != null) {
-                for (int capability : capabilities) {
-                    if (capability == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING) {
-                        supportsReprocessing = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!supportsReprocessing) {
+            if (checkCameraReprocessable(characteristics)) {
                 Log.e("Camera", "The camera does not support YUV reprocessing.");
-                return;
-            }
 
-            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
 
-            InputConfiguration inputConfig = null;
-            if (map != null) {
-                int[] outputFormats = map.getOutputFormats();
-                for (int format : outputFormats) {
-                    Log.d("Camera", "Output format supported: " + format);
-                }
+                InputConfiguration inputConfig = getInputConfiguration(map);
 
-                // Verifica i formati di input
-                Size[] inputSizes = map.getInputSizes(ImageFormat.YUV_420_888); // Prova con YUV
-                if (inputSizes != null) {
-                    for (Size size : inputSizes) {
-                        Log.d("Camera", "Supported input size for YUV: " + size.getWidth() + "x" + size.getHeight());
-                    }
-                } else {
-                    Log.e("Camera", "No supported input sizes for YUV_420_888.");
-                }
+                cameraDevice.createReprocessableCaptureSession(
+                        inputConfig,
+                        Arrays.asList(textureSurface, reprocessableSurface),
+                        new CameraCaptureSession.StateCallback() {
+                            @Override
+                            public void onConfigured(@NonNull CameraCaptureSession session) {
+                                captureSession = session;
 
-                // Crea la sessione di cattura riutilizzabile
-                selectedSize = inputSizes[0]; // Dimensioni supportate
-                inputConfig = new InputConfiguration(
-                        selectedSize.getWidth(),
-                        selectedSize.getHeight(),
-                        ImageFormat.YUV_420_888
-                );
-            }
+                                try {
+                                    // Configura la richiesta di anteprima
+                                    CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                                    previewBuilder.addTarget(textureSurface);
 
-            cameraDevice.createReprocessableCaptureSession(
-                    inputConfig,
-                    Arrays.asList(textureSurface, reprocessableSurface),
-                    new CameraCaptureSession.StateCallback() {
-                        @Override
-                        public void onConfigured(@NonNull CameraCaptureSession session) {
-                            captureSession = session;
+                                    // Imposta la rotazione prima di creare la richiesta finale
+                                    int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
+                                    configureTransform(rotation, selectedSize);
+                                    setPreviewRotation(previewBuilder, rotation);
 
-                            try {
-                                // Configura la richiesta di anteprima
-                                CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-                                previewBuilder.addTarget(textureSurface);
+                                    // Crea la richiesta di cattura e avvia l'anteprima
+                                    previewRequest = previewBuilder.build();
+                                    captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
 
-                                // Imposta la rotazione prima di creare la richiesta finale
-                                int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-                                configureTransform(rotation, selectedSize);
-                                setPreviewRotation(previewBuilder, rotation);
-
-                                // Crea la richiesta di cattura e avvia l'anteprima
-                                previewRequest = previewBuilder.build();
-                                captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
-
-                                // Salva le impostazioni attuali
-                                setCurrentCameraSettings(previewRequest);
-                                Log.d("Camera", "Reprocessable preview started successfully.");
-                                parametersReady.postValue(currentSettings);
-                            } catch (CameraAccessException e) {
-                                Log.e("Camera", "Error starting reprocessable preview: ", e);
+                                    // Salva le impostazioni attuali
+                                    setCurrentCameraSettings(previewRequest);
+                                    Log.d("Camera", "Reprocessable preview started successfully.");
+                                    parametersReady.postValue(currentSettings);
+                                } catch (CameraAccessException e) {
+                                    Log.e("Camera", "Error starting reprocessable preview: ", e);
+                                }
                             }
-                        }
 
-                        @Override
-                        public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                            Toast.makeText(activity, "Reprocessable preview configuration failed.", Toast.LENGTH_SHORT).show();
+                            @Override
+                            public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                                Toast.makeText(activity, "Reprocessable preview configuration failed.", Toast.LENGTH_SHORT).show();
+                            }
+                        },
+                        backgroundHandler
+                );
+            } else {
+                cameraDevice.createCaptureSession(Arrays.asList(textureSurface, reprocessableSurface), new CameraCaptureSession.StateCallback() {
+                    @Override
+                    public void onConfigured(@NonNull CameraCaptureSession session) {
+                        captureSession = session;
+                        try {
+                            // Crea una richiesta di anteprima
+                            CaptureRequest.Builder previewBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+                            previewBuilder.addTarget(textureSurface);
+
+                            previewRequest = previewBuilder.build();
+                            setCurrentCameraSettings(previewRequest);
+
+                            // Imposta la richiesta di preview come ripetitiva
+                            captureSession.setRepeatingRequest(previewRequest, null, backgroundHandler);
+
+                            parametersReady.postValue(currentSettings);
+                        } catch (CameraAccessException e) {
+                            e.printStackTrace();
                         }
-                    },
-                    backgroundHandler
-            );
+                    }
+
+                    @Override
+                    public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                        Toast.makeText(activity, "Preview configuration failed.", Toast.LENGTH_SHORT).show();
+                    }
+                }, backgroundHandler);
+            }
         } catch (CameraAccessException e) {
             Log.e("Camera", "Error initializing reprocessable preview: ", e);
         }
     }
 
+    private boolean checkCameraReprocessable(CameraCharacteristics characteristics) {
+        // Verifica se la fotocamera supporta YUV reprocessing
+        boolean supportsReprocessing = false;
+        int[] capabilities = characteristics.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES);
+
+        if (capabilities != null) {
+            for (int capability : capabilities) {
+                if (capability == CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_YUV_REPROCESSING) {
+                    supportsReprocessing = true;
+                    break;
+                }
+            }
+        }
+        return supportsReprocessing;
+    }
+
+    private InputConfiguration getInputConfiguration(StreamConfigurationMap map) {
+        InputConfiguration inputConfig = null;
+        if (map != null) {
+            int[] outputFormats = map.getOutputFormats();
+            for (int format : outputFormats) {
+                Log.d("Camera", "Output format supported: " + format);
+            }
+
+            // Verifica i formati di input
+            Size[] inputSizes = map.getInputSizes(ImageFormat.YUV_420_888); // Prova con YUV
+            if (inputSizes != null) {
+                for (Size size : inputSizes) {
+                    Log.d("Camera", "Supported input size for YUV: " + size.getWidth() + "x" + size.getHeight());
+                }
+            } else {
+                Log.e("Camera", "No supported input sizes for YUV_420_888.");
+            }
+
+            // Crea la sessione di cattura riutilizzabile
+            selectedSize = inputSizes[0]; // Dimensioni supportate
+            inputConfig = new InputConfiguration(
+                    selectedSize.getWidth(),
+                    selectedSize.getHeight(),
+                    ImageFormat.YUV_420_888
+            );
+        }
+
+        return inputConfig;
+    }
 
     private ScheduledExecutorService captureScheduler;
 
