@@ -12,6 +12,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.ads.MobileAds;
+
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +30,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         timeTextView = findViewById(R.id.timeTextView);
+
+        new Thread(
+                () -> {
+                    // Initialize the Google Mobile Ads SDK on a background thread.
+                    MobileAds.initialize(this, initializationStatus -> {});
+                })
+                .start();
 
         try {
             camera2Manager = Camera2Manager.getInstance(this);
@@ -115,6 +124,6 @@ public class MainActivity extends AppCompatActivity {
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         camera2Manager.closeCamera();
-        camera2Manager.openCamera();
+        camera2Manager.openCameraAfterAD();
     }
 }

@@ -1,5 +1,5 @@
 [versions]
-agp = "8.8.0"
+agp = "8.8.1"
 junit = "4.13.2"
 junitVersion = "1.2.1"
 espressoCore = "3.6.1"
@@ -12,7 +12,7 @@ ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitV
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
-ffmpeg-kit = "com.arthenica:ffmpeg-kit-full:5.1"
+ffmpeg-kit = "com.arthenica:ffmpeg-kit-full:6.0.LTS"
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

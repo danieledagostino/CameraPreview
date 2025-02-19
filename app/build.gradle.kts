@@ -10,25 +10,25 @@ android {
         applicationId = "org.dd.camerapreview"
         minSdk = 28
         targetSdk = 35
-        versionCode = 2
-        versionName = "2.0"
+        versionCode = 13
+        versionName = "2.11"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "armeabi") // Architetture supportate
+        }
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
-            proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
-            )
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
+    ndkVersion = "27.0.12077973"
 }
 
 dependencies {
@@ -39,4 +39,5 @@ dependencies {
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
     implementation(libs.ffmpeg.kit) // Usa la libreria FFmpegKit
+    implementation("com.google.android.gms:play-services-ads:23.6.0")
 }

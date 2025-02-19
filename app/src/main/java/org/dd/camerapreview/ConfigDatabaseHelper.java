@@ -1,10 +1,11 @@
 package org.dd.camerapreview;
 
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
+import android.content.SharedPreferences;
+import java.util.HashMap;
+import java.util.Map;
 
-public class ConfigDatabaseHelper extends SQLiteOpenHelper {
+public class ConfigDatabaseHelper {
 
     private static final String DATABASE_NAME = "CameraConfig.db";
     private static final int DATABASE_VERSION = 1;
@@ -21,29 +22,60 @@ public class ConfigDatabaseHelper extends SQLiteOpenHelper {
     public static final String RULER_COLUMN_ID = "id";
     public static final String RULER_COLUMN_VALUE = "selectedValue";
 
-    private static final String CREATE_CAMERA_TABLE = "CREATE TABLE " + TABLE_NAME + " ("
-            + COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-            + "configKey INTEGER, " // Chiave (es. EXPOSURE_TIME_RANGE)
-            + "configValues TEXT);"; // Valori associati alla chiave
-
-    private static final String CREATE_RULER_TABLE = "CREATE TABLE " + RULER_TABLE_NAME + " ("
-            + RULER_COLUMN_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
-            + RULER_COLUMN_VALUE + " TEXT);"; // Valore selezionato dal DraggableRulerView
+    private static final String PREF_NAME = "CameraConfigPrefs";
+    private static final String CAMERA_CONFIG_PREFIX = "camera_config_";
+    private static final String RULER_CONFIG_PREFIX = "ruler_config_";
+    private SharedPreferences sharedPreferences;
 
     public ConfigDatabaseHelper(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        sharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
     }
 
-    @Override
-    public void onCreate(SQLiteDatabase db) {
-        db.execSQL(CREATE_CAMERA_TABLE);
-        db.execSQL(CREATE_RULER_TABLE);
+    public void saveCameraConfig(int configKey, String configValues) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(CAMERA_CONFIG_PREFIX + configKey, configValues);
+        editor.apply();
     }
 
-    @Override
-    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + RULER_TABLE_NAME);
-        onCreate(db);
+    public String getCameraConfig(int configKey) {
+        return sharedPreferences.getString(CAMERA_CONFIG_PREFIX + configKey, "");
+    }
+
+    public void saveRulerConfig(int id, String selectedValue) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(RULER_CONFIG_PREFIX + id, selectedValue);
+        editor.apply();
+    }
+
+    public String getRulerConfig(int id) {
+        return sharedPreferences.getString(RULER_CONFIG_PREFIX + id, "");
+    }
+
+    public Map<Integer, String> getAllCameraConfigs() {
+        Map<Integer, String> configMap = new HashMap<>();
+        for (Map.Entry<String, ?> entry : sharedPreferences.getAll().entrySet()) {
+            if (entry.getKey().startsWith(CAMERA_CONFIG_PREFIX)) {
+                int key = Integer.parseInt(entry.getKey().replace(CAMERA_CONFIG_PREFIX, ""));
+                configMap.put(key, (String) entry.getValue());
+            }
+        }
+        return configMap;
+    }
+
+    public Map<Integer, String> getAllRulerConfigs() {
+        Map<Integer, String> configMap = new HashMap<>();
+        for (Map.Entry<String, ?> entry : sharedPreferences.getAll().entrySet()) {
+            if (entry.getKey().startsWith(RULER_CONFIG_PREFIX)) {
+                int key = Integer.parseInt(entry.getKey().replace(RULER_CONFIG_PREFIX, ""));
+                configMap.put(key, (String) entry.getValue());
+            }
+        }
+        return configMap;
+    }
+
+    public void clearAllConfigs() {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.clear();
+        editor.apply();
     }
 }

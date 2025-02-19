@@ -1,90 +1,61 @@
 package org.dd.camerapreview;
 
-import android.content.ContentValues;
 import android.content.Context;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-
+import android.content.SharedPreferences;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class CameraConfigManager {
 
-    private ConfigDatabaseHelper dbHelper;
+    private static final String PREF_NAME = "CameraConfigPrefs";
+    private static final String CONFIG_KEY_PREFIX = "config_";
     private static CameraConfigManager instance;
+    private SharedPreferences sharedPreferences;
 
-    private static final String COLUMN_EXPOSURE_TIME = "exposure_time";
-    private static final String COLUMN_SENSITIVITY = "sensitivity";
-    private static final String COLUMN_FOCUS_DISTANCE = "focus_distance";
-    private static final String COLUMN_AE_COMPENSATION = "ae_compensation";
-    private static final String COLUMN_FOCAL_LENGTH = "focal_length";
-    private static final String COLUMN_FRAME_DURATION = "frame_duration";
-
-    private static final String COLUMN_CONFIG_KEY = "configKey";
-    private static final String COLUMN_CONFIG_VALUES = "configValues";
-
-    public CameraConfigManager(Context context) {
-        dbHelper = new ConfigDatabaseHelper(context);
+    private CameraConfigManager(Context context) {
+        sharedPreferences = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
     }
 
-    // Inserire configurazione da una mappa
-    public void insertConfig(Map<Integer, List<String>> configMap) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-
-        for (Map.Entry<Integer, List<String>> entry : configMap.entrySet()) {
-            Integer key = entry.getKey(); // Chiave della configurazione (es. EXPOSURE_TIME_RANGE)
-            List<String> values = entry.getValue(); // Lista di valori associati
-
-            // Unisci i valori in una singola stringa separata da virgole
-            StringBuilder valueString = new StringBuilder();
-            for (String value : values) {
-                if (valueString.length() > 0) valueString.append(","); // Aggiungi separatore
-                valueString.append(value);
-            }
-
-            // Prepara i dati per l'inserimento
-            ContentValues contentValues = new ContentValues();
-            contentValues.put(COLUMN_CONFIG_KEY, key);
-            contentValues.put(COLUMN_CONFIG_VALUES, valueString.toString());
-
-            // Inserisci il record
-            db.insert(ConfigDatabaseHelper.TABLE_NAME, null, contentValues);
-        }
-
-        db.close(); // Chiudi il database
-    }
-
-    public Map<Integer, List<String>> readCameraConfig() {
-        Map<Integer, List<String>> configMap = new HashMap<>();
-        SQLiteDatabase db = dbHelper.getReadableDatabase();
-
-        // Esegui una query per ottenere tutte le configurazioni
-        Cursor cursor = db.query(ConfigDatabaseHelper.TABLE_NAME,
-                new String[]{COLUMN_CONFIG_KEY, COLUMN_CONFIG_VALUES},
-                null, null, null, null, null);
-
-        if (cursor != null) {
-            while (cursor.moveToNext()) {
-                int configKey = cursor.getInt(cursor.getColumnIndex(COLUMN_CONFIG_KEY));
-                String configValues = cursor.getString(cursor.getColumnIndex(COLUMN_CONFIG_VALUES));
-
-                // Dividi la stringa dei valori in una lista
-                List<String> valuesList = List.of(configValues.split(","));
-
-                // Aggiungi alla mappa
-                configMap.put(configKey, valuesList);
-            }
-            cursor.close(); // Chiudi il cursore
-        }
-
-        db.close(); // Chiudi il database
-        return configMap;
-    }
     public static synchronized CameraConfigManager getInstance(Context context) {
         if (instance == null) {
             instance = new CameraConfigManager(context.getApplicationContext());
         }
         return instance;
+    }
+
+    // Salva la configurazione in SharedPreferences
+    public void insertConfig(Map<Integer, List<String>> configMap) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        for (Map.Entry<Integer, List<String>> entry : configMap.entrySet()) {
+            String key = CONFIG_KEY_PREFIX + entry.getKey();
+            String value = String.join(",", entry.getValue());
+            editor.putString(key, value);
+        }
+        editor.apply();
+    }
+
+    // Legge la configurazione da SharedPreferences
+    public Map<Integer, List<String>> readCameraConfig() {
+        Map<Integer, List<String>> configMap = new HashMap<>();
+        Map<String, ?> allEntries = sharedPreferences.getAll();
+
+        for (Map.Entry<String, ?> entry : allEntries.entrySet()) {
+            if (entry.getKey().startsWith(CONFIG_KEY_PREFIX)) {
+                int configKey = Integer.parseInt(entry.getKey().replace(CONFIG_KEY_PREFIX, ""));
+                List<String> values = Arrays.asList(((String) entry.getValue()).split(","));
+                configMap.put(configKey, values);
+            }
+        }
+        return configMap;
+    }
+
+    // Cancella tutte le configurazioni salvate
+    public void clearConfig() {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.clear();
+        editor.apply();
     }
 }

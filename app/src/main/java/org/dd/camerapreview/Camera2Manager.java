@@ -42,6 +42,12 @@ import com.arthenica.ffmpegkit.LogCallback;
 import com.arthenica.ffmpegkit.ReturnCode;
 import com.arthenica.ffmpegkit.Statistics;
 import com.arthenica.ffmpegkit.StatisticsCallback;
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -49,6 +55,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
+import java.time.chrono.JapaneseEra;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -70,6 +77,14 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.annotation.TargetApi;
+
+//adMob
+import com.google.android.gms.ads.AdError;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.FullScreenContentCallback;
+import com.google.android.gms.ads.LoadAdError;
+import com.google.android.gms.ads.interstitial.InterstitialAd;
+import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
 public class Camera2Manager {
 
     private final Activity activity;
@@ -113,7 +128,7 @@ public class Camera2Manager {
     public final static List<String> SENSOR_MAX_FRAME_DURATION_VALUES = Arrays.asList("Auto", "15fps", "24fps", "60fps", "90fps", "120fps", "150fps");
     public final static int DURATION = 7;
     public final static List<String> DURATION_VALUES = Arrays.asList("Auto", "10sec", "30sec", "1min", "3min", "5min", "10min");
-
+    public final static int LENS_AVAILABLE_APERTURES_LENGTHS = 8;
     private List<String> capturedImagePaths = new ArrayList<>();
 
     private static Camera2Manager instance;
@@ -126,6 +141,7 @@ public class Camera2Manager {
     float focalLength = 0;
     long frameDuration = 1;
     long duration = 0;
+    float aperture = 0;
 
     private int imageCounter = 0;
 
@@ -142,6 +158,10 @@ public class Camera2Manager {
 
     Size selectedSize = null;
 
+    private InterstitialAd mInterstitialAd;
+    String testAdUnitId = "ca-app-pub-3940256099942544/1033173712"; // ID di test per interstitial
+    String adUnitId = "ca-app-pub-5392651601473000/9929122647";
+
     public static Camera2Manager getInstance(Activity activity) {
         if (instance == null) {
             try {
@@ -155,6 +175,8 @@ public class Camera2Manager {
 
     public Camera2Manager(Activity activity) throws CameraAccessException {
         this.activity = activity;
+
+        loadAdMob();
         textureView = activity.findViewById(R.id.camera_preview);
         timeTextView = activity.findViewById(R.id.timeTextView);
         cameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
@@ -188,10 +210,13 @@ public class Camera2Manager {
         if (cameraConfig.containsKey(LENS_AVAILABLE_FOCAL_LENGTHS)) {
             focalLength = Float.parseFloat(cameraConfig.get(LENS_AVAILABLE_FOCAL_LENGTHS).get(0));
         }
+        if (cameraConfig.containsKey(LENS_AVAILABLE_APERTURES_LENGTHS)) {
+            aperture = Float.parseFloat(cameraConfig.get(LENS_AVAILABLE_APERTURES_LENGTHS).get(0));
+        }
 
         getCameraCapabilities();
 
-        openCamera();
+        openCameraAfterAD();
     }
 
     /*
@@ -255,7 +280,20 @@ public class Camera2Manager {
         }
     }
 
-    public void openCamera() {
+    public void openCameraAfterAD() {
+        try {
+            if (mInterstitialAd != null) {
+                mInterstitialAd.show(activity);
+            } else {
+                openCamera();
+            }
+        }catch (Exception e) {
+            Log.e("AdMob", "Error showing adMob:", e);
+            openCamera();
+        }
+    }
+
+    private void openCamera() {
         startBackgroundThread();
         if (textureView.isAvailable()) {
             try {
@@ -303,7 +341,7 @@ public class Camera2Manager {
     public void switchCamera() {
         isBackCamera = !isBackCamera;
         closeCamera();
-        openCamera();
+        openCameraAfterAD();
     }
 
 
@@ -383,7 +421,7 @@ public class Camera2Manager {
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
             // La superficie è pronta, apri la fotocamera
-            openCamera();
+            openCameraAfterAD();
         }
 
         @Override
@@ -451,12 +489,17 @@ public class Camera2Manager {
                     duration = convertSecondsStringToInt(value);
                     break;
 
+                case LENS_AVAILABLE_APERTURES_LENGTHS:
+                    aperture = Float.parseFloat(value);
+                    break;
+
                 default:
                     // Configurazione non supportata
                     Toast.makeText(activity, "Unsupported camera configuration", Toast.LENGTH_SHORT).show();
                     return;
             }
 
+            /*
             // Controlli aggiunti
             if (!"Auto".equals(value) && (frameDuration < exposureTime)) {
                 Toast.makeText(activity, "Frame duration cannot be less than exposure time", Toast.LENGTH_SHORT).show();
@@ -467,6 +510,7 @@ public class Camera2Manager {
                 Toast.makeText(activity, "Duration cannot be less than frame duration or exposure time", Toast.LENGTH_SHORT).show();
                 duration = (int) Math.max(frameDuration, exposureTime); // Correzione automatica
             }
+            */
 
             // Imposta i parametri aggiornati
             builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, exposureTime);
@@ -474,6 +518,7 @@ public class Camera2Manager {
             builder.set(CaptureRequest.LENS_FOCUS_DISTANCE, focusDistance);
             builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, aeCompensation);
             builder.set(CaptureRequest.LENS_FOCAL_LENGTH, focalLength);
+            builder.set(CaptureRequest.LENS_APERTURE, aperture);
             // builder.set(CaptureRequest.SENSOR_FRAME_DURATION, frameDuration);
 
             // Applica la nuova configurazione alla sessione di cattura
@@ -846,7 +891,7 @@ public class Camera2Manager {
 
             // Riavvia la fotocamera
             closeCamera();
-            openCamera();
+            openCameraAfterAD();
         }).start();
     }
 
@@ -908,7 +953,7 @@ public class Camera2Manager {
                     break;
             }
             closeCamera();
-            openCamera();
+            openCameraAfterAD();
         } catch (CameraAccessException e) {
             Log.e("Camera", "Error selecting camera: " + e);
         }
@@ -1108,6 +1153,23 @@ public class Camera2Manager {
             }
             results.put(LENS_AVAILABLE_FOCAL_LENGTHS, focalLengthsAsStrings);
         }
+
+        //        f/1.8, f/2.2
+        float[] apertures = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_APERTURES);
+        if (apertures != null) {
+            List<String> aperturesAsStrings = new ArrayList<>();
+
+            for (float aperture : apertures) {
+                aperturesAsStrings.add(Float.toString(focalLength));
+            }
+            results.put(LENS_AVAILABLE_APERTURES_LENGTHS, aperturesAsStrings);
+        }
+
+        //Long maxFrameDuration = characteristics.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
+        //if (maxFrameDuration != null) {
+        results.put(SENSOR_MAX_FRAME_DURATION, SENSOR_MAX_FRAME_DURATION_VALUES);
+        //log.debug("Camera", "Max Frame Duration: " + maxFrameDuration + " ns");
+        //}
 
         //Long maxFrameDuration = characteristics.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION);
         //if (maxFrameDuration != null) {
@@ -1383,4 +1445,61 @@ public class Camera2Manager {
         return nanoseconds / 1_000_000.0; // Divide per 1.000.000 per ottenere millisecondi
     }
 
+    private void loadAdMob() {
+        AdRequest adRequestStart = new AdRequest.Builder().build();
+
+        InterstitialAd.load(activity,adUnitId, adRequestStart,
+                new InterstitialAdLoadCallback() {
+                    @Override
+                    public void onAdLoaded(@NonNull InterstitialAd interstitialAd) {
+                        // The mInterstitialAd reference will be null until
+                        // an ad is loaded.
+                        mInterstitialAd = interstitialAd;
+                        mInterstitialAd.setFullScreenContentCallback(mInterstitialAdCallback);
+                        Log.i("AdMob", "onAdLoaded");
+                    }
+
+                    @Override
+                    public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
+                        // Handle the error
+                        Log.d("AdMob", loadAdError.toString());
+                        mInterstitialAd = null;
+                    }
+                });
+    }
+
+    private FullScreenContentCallback mInterstitialAdCallback = new FullScreenContentCallback() {
+        @Override
+        public void onAdClicked() {
+            // Called when a click is recorded for an ad.
+            Log.d("AdMob", "Ad was clicked.");
+        }
+
+        @Override
+        public void onAdDismissedFullScreenContent() {
+            // Called when ad is dismissed.
+            // Set the ad reference to null so you don't show the ad a second time.
+            Log.i("AdMob", "mInterstitialAdOnCycleStartCallback dismissed fullscreen content.");
+            openCamera();
+        }
+
+        @Override
+        public void onAdFailedToShowFullScreenContent(AdError adError) {
+            // Called when ad fails to show.
+            Log.i("AdMob", "mInterstitialAdOnCycleStartCallback failed to show fullscreen content.");
+            openCamera();
+        }
+
+        @Override
+        public void onAdImpression() {
+            // Called when an impression is recorded for an ad.
+            Log.d("AdMob", "Ad recorded an impression.");
+        }
+
+        @Override
+        public void onAdShowedFullScreenContent() {
+            // Called when ad is shown.
+            Log.d("AdMob", "Ad showed fullscreen content.");
+        }
+    };
 }

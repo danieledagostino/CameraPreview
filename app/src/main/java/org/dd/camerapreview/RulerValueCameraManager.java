@@ -1,28 +1,29 @@
 package org.dd.camerapreview;
 
-import android.content.ContentValues;
 import android.content.Context;
-import android.database.sqlite.SQLiteDatabase;
+import android.content.SharedPreferences;
 
 public class RulerValueCameraManager {
 
-    private ConfigDatabaseHelper dbHelper;
+    private static final String PREFS_NAME = "CameraConfigPrefs";
+    private static final String RULER_PREFIX = "ruler_value_";
     private static RulerValueCameraManager instance;
+    private SharedPreferences sharedPreferences;
 
     public RulerValueCameraManager(Context context) {
-        dbHelper = new ConfigDatabaseHelper(context);
+        sharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     // Inserire un valore selezionato dal DraggableRulerView
-    public void insertRulerValue(int id,String selectedValue) {
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
+    public void insertRulerValue(int id, String selectedValue) {
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString(RULER_PREFIX + id, selectedValue);
+        editor.apply();
+    }
 
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(ConfigDatabaseHelper.RULER_COLUMN_ID, id);
-        contentValues.put(ConfigDatabaseHelper.RULER_COLUMN_VALUE, selectedValue);
-
-        db.insert(ConfigDatabaseHelper.RULER_TABLE_NAME, null, contentValues);
-        db.close();
+    // Recuperare un valore selezionato dal DraggableRulerView
+    public String getRulerValue(int id) {
+        return sharedPreferences.getString(RULER_PREFIX + id, "");
     }
 
     public static synchronized RulerValueCameraManager getInstance(Context context) {
